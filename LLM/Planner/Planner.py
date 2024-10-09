@@ -1,5 +1,6 @@
 import os
-import openai
+from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
+import torch
 
 class Planner(object):
     """
@@ -8,16 +9,22 @@ class Planner(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, is_log_example = False, temperature = 0):
-        
+    def __init__(self, arg, is_log_example = False, temperature = 0, device='cuda:0',max_len=512):
+
         self.arg = arg
         self.model = arg.model
         self.temperature = temperature
+        self.device=device
         self.messages = None
         self.log_dir = arg.logdir
-        self.log_file_path = self.log_dir + "/planner_log.txt"
+        self.log_file_path = self.log_dir + "/planner_log.txt" 
+        self.tokenizer = LLaMATokenizer.from_pretrained(self.model)
+        self.llm = LLaMAForCausalLM.from_pretrained(
+            self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map="cuda"
+        )
+        self.max_len = max_len
         self.is_log_example = is_log_example
-        
+
         # root for prompt examples
         if self.arg.domain == 'blocksworld':
             self.max_examples = 5
@@ -78,7 +85,7 @@ class Planner(object):
                 contents = f.read().split('Action Sequence', 1)
                 question = contents[0]
                 answer = 'Action Sequence' + contents[1]
-                
+
                 question_message = {"role": "system", "name":"example_user", "content": question}
                 self.messages.append(question_message)
                 if self.is_log_example == True and is_reinitialize == False:
@@ -101,13 +108,27 @@ class Planner(object):
         question.append(question_message)
         self.write_content(content= content, is_append=True)
 
-        if temperature == None:
-            response = openai.ChatCompletion.create(model=self.model, messages=question, temperature=self.temperature)
-        else:
-            response = openai.ChatCompletion.create(model=self.model, messages=question, temperature=temperature)
+    
+        question_text = "Q: {}".format(question)
 
-        response_content = response["choices"][0]["message"]["content"]
+        question_tokens = self.tokenizer.encode(question_text, return_tensors="pt").to(
+            self.device
+        )
+        generated_tokens = self.llm.generate(
+        question_tokens,
+        top_k=128,
+        max_length=self.max_len,
+        num_return_sequences=1,
+        output_scores=True,
+        output_hidden_states=True,
+        output_attentions=True,
+        return_dict_in_generate=True,
+        )
+        len_question_tokens = len(question_tokens[0])
+        generated_tokens = generated_tokens.sequences[0][len_question_tokens:]
+        generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
+
+        response_content = generated_text
         self.write_content(content= response_content, is_append=True)
 
-        return response
-        
+        return response_content

@@ -1,4 +1,3 @@
-import openai
 import os
 import argparse
 import datetime
@@ -282,7 +281,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
 
         # LLM translator
         response_translator = LLM_Translator.query(description, is_append = False)
-        planning_problem = response_translator["choices"][0]["message"]["content"]
+        planning_problem = response_translator.choices[0].message.content
         # print(response_translator)
 
         # refine loop
@@ -306,7 +305,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
             # print(response_planner)
 
             # LLM planner
-            action_sequence = response_planner["choices"][0]["message"]["content"]
+            action_sequence = response_planner.choices[0].message.content
 
             # simulate actions
             print("Attempt", j)
@@ -501,13 +500,11 @@ if __name__=="__main__":
 
     # Openai Key (please replace with your own key)
     # openai.api_key = 'YOUR-KEY'
-    openai.api_key = 'YOUR-KEY'
-
-    # parameters
+  
     parser = argparse.ArgumentParser(description="LLM-Task-Planner")
     parser.add_argument('--domain', type=str, choices=DOMAINS, default="blocksworld")
     parser.add_argument('--method', type=str, choices=METHODS, default="LLM_trans_exact_feedback")
-    parser.add_argument('--model', type=str, choices=MODELS, default="gpt-3.5-turbo")
+    parser.add_argument('--model', type=str, choices=MODELS, default="gpt-4o")
     parser.add_argument('--logdir', type=str, default=None)
     parser.add_argument('--num_objects', type=int, choices=[3,4], default=3)
     parser.add_argument('--num_trans_example', type=int, choices=[1,2,3], default=3)

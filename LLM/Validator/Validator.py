@@ -1,5 +1,8 @@
 import os
-import openai
+### replace openai with transformers library from hugging face
+from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
+#import transformers
+
 
 class Validator(object):
     """
@@ -17,6 +20,7 @@ class Validator(object):
         self.log_dir = arg.logdir
         self.log_file_path = self.log_dir + "/validator_log.txt"
         self.is_log_example = is_log_example
+        #self.pipepline = transformers.pipelines( )
         
         # root for prompt examples
         if self.arg.domain == 'blocksworld':
@@ -96,8 +100,8 @@ class Validator(object):
         question.append(question_message)
         self.write_content(content= content, is_append=True)
 
-        response = openai.ChatCompletion.create(model=self.model, messages=question, temperature=self.temperature)
-
+        #response = openai.ChatCompletion.create(model=self.model, messages=question, temperature=self.temperature)
+        response = transformers
         response_content = response["choices"][0]["message"]["content"]
         self.write_content(content= response_content, is_append=True)
 
