@@ -1,0 +1,3 @@
+Test log for blocksworld with 3 blocks.
+Test case index: 3
+I have 3 blocks. Initially: Block b1 is on the table. Block b2 is on the table. Block b3 is on the table. Your goal is to move the blocks such that they are stacked in the order: b3 on b1, b1 on b2, and b2 on table. 

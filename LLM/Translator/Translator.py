@@ -1,5 +1,6 @@
 import os
-import openai
+from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
+import torch
 
 class Translator(object):
     """
@@ -8,7 +9,7 @@ class Translator(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, is_log_example = False, temperature = 0):
+    def __init__(self, arg, is_log_example = False, temperature = 0,device='cuda:0',max_len=512):
         
         self.arg = arg
         self.model = arg.model
@@ -17,6 +18,12 @@ class Translator(object):
         self.log_dir = arg.logdir
         self.log_file_path = self.log_dir + "/translator_log.txt"
         self.is_log_example = is_log_example
+        self.device= device
+        self.max_len = max_len
+        self.tokenizer = LLaMATokenizer.from_pretrained(self.model)
+        self.llm = LLaMAForCausalLM.from_pretrained(
+            self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map=self.device
+        )
         
         # root for prompt examples
         if self.arg.domain == 'blocksworld':
@@ -92,10 +99,28 @@ class Translator(object):
         question.append(question_message)
         self.write_content(content= content, is_append=True)
 
-        response = openai.ChatCompletion.create(model=self.model, messages=question, temperature=self.temperature)
+        question_text = content
+        # Translate description to PDDL domain and problem files
+        question_tokens = self.tokenizer.encode(question_text, return_tensors="pt").to(
+            self.device
+        )
+        generated_tokens = self.llm.generate(
+        question_tokens,
+        top_k=128,
+        max_length=self.max_len,
+        num_return_sequences=1,
+        output_scores=True,
+        output_hidden_states=True,
+        output_attentions=True,
+        return_dict_in_generate=True,
+        )
+        len_question_tokens = len(question_tokens[0])
+        generated_tokens = generated_tokens.sequences[0][len_question_tokens:]
+        generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
 
-        response_content = response["choices"][0]["message"]["content"]
+        response_content = generated_text
         self.write_content(content= response_content, is_append=True)
+      
 
-        return response
+        return response_content
         

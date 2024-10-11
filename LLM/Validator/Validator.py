@@ -101,7 +101,7 @@ class Validator(object):
         self.write_content(content= content, is_append=True)
 
         #response = openai.ChatCompletion.create(model=self.model, messages=question, temperature=self.temperature)
-        response = transformers
+        response = self.llm
         response_content = response["choices"][0]["message"]["content"]
         self.write_content(content= response_content, is_append=True)
 

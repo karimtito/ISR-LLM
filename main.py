@@ -15,7 +15,7 @@ from Cooking_Sim.Cooking_Sim import CookingSim
 
 DOMAINS = ["blocksworld", "ballmoving", "cooking"]
 METHODS = ["LLM_trans_self_feedback", "LLM_trans_no_feedback", "LLM_trans_exact_feedback", "LLM_no_trans", "LLM_no_trans_self_feedback"]
-MODELS = ["gpt-3.5-turbo","gpt-4", "gpt-3.5-turbo-16k"]
+MODELS = ["gpt-3.5-turbo","gpt-4", "gpt-3.5-turbo-16k","circulus/alpaca-7b"]
 
 # LLM planning without PDDL translator
 def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine,
@@ -504,7 +504,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description="LLM-Task-Planner")
     parser.add_argument('--domain', type=str, choices=DOMAINS, default="blocksworld")
     parser.add_argument('--method', type=str, choices=METHODS, default="LLM_trans_exact_feedback")
-    parser.add_argument('--model', type=str, choices=MODELS, default="gpt-4o")
+    parser.add_argument('--model', type=str, choices=MODELS, default="circulus/alpaca-7b")
     parser.add_argument('--logdir', type=str, default=None)
     parser.add_argument('--num_objects', type=int, choices=[3,4], default=3)
     parser.add_argument('--num_trans_example', type=int, choices=[1,2,3], default=3)
