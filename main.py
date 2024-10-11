@@ -281,7 +281,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
 
         # LLM translator
         response_translator = LLM_Translator.query(description, is_append = False)
-        planning_problem = response_translator.choices[0].message.content
+        planning_problem = response_translator
         # print(response_translator)
 
         # refine loop
