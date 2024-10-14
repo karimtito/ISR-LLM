@@ -1,6 +1,15 @@
 import os
 from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
+from transformers import LlamaTokenizer, LlamaForCausalLM, AutoTokenizer, AutoModelForCausalLM
+
 import torch
+
+
+luna_models= {  'tokenizer': LLaMATokenizer, 'model': LLaMAForCausalLM}
+hf_llama_models = { 'tokenizer': LlamaTokenizer, 'model': LlamaForCausalLM}
+hf_auto_models = { 'tokenizer': AutoTokenizer, 'model': AutoModelForCausalLM}
+
+backends = {'luna': luna_models, 'hf_llama': hf_llama_models, 'hf_auto': hf_auto_models}
 
 class Planner(object):
     """
@@ -9,7 +18,7 @@ class Planner(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, is_log_example = False, temperature = 0, device='cuda:0',max_len=512):
+    def __init__(self, arg, is_log_example = False, temperature = 0, device='cuda:0',max_len=512, backend_name='hf_llama'):
 
         self.arg = arg
         self.model = arg.model
@@ -18,8 +27,10 @@ class Planner(object):
         self.messages = None
         self.log_dir = arg.logdir
         self.log_file_path = self.log_dir + "/planner_log.txt" 
-        self.tokenizer = LLaMATokenizer.from_pretrained(self.model)
-        self.llm = LLaMAForCausalLM.from_pretrained(
+        self.backend_name = backend_name
+        self.backend = backends[backend_name]
+        self.tokenizer = self.backend['tokenize'].from_pretrained(self.model)
+        self.llm = self.backend['model'].from_pretrained(
             self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map="cuda"
         )
         self.max_len = max_len

@@ -505,11 +505,14 @@ if __name__=="__main__":
     parser.add_argument('--domain', type=str, choices=DOMAINS, default="blocksworld")
     parser.add_argument('--method', type=str, choices=METHODS, default="LLM_trans_exact_feedback")
     parser.add_argument('--model', type=str, choices=MODELS, default="circulus/alpaca-7b")
+    parser.add_argument('--max_len', type=int, default=1024)
+    
     parser.add_argument('--logdir', type=str, default=None)
     parser.add_argument('--num_objects', type=int, choices=[3,4], default=3)
     parser.add_argument('--num_trans_example', type=int, choices=[1,2,3], default=3)
     parser.add_argument('--num_plan_example', type=int, choices=[3,4,5], default=4)
     parser.add_argument('--num_valid_example', type=int, choices=[4,5,6], default=6)
+
     args = parser.parse_args()
 
     # initialize log dir
