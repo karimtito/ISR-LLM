@@ -589,7 +589,7 @@ if __name__=="__main__":
     num_test = 10
     num_prompt_examples_dataset = 3 # the first n examples are in the prompt example, so skip them
     max_num_refine = 10  # max number of refinement, if it is 0 -> no feedback
-    gpt_api_wait_time = 0.1 # wait time during gpt api call for preventing overload
+    gpt_api_wait_time = args.gpt_api_wait_time
     max_refine_temperature = 0.4 # maximal value of refine temperature
 
     # test log
