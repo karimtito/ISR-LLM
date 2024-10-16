@@ -18,7 +18,7 @@ class Planner(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, is_log_example = False, temperature = 0, device='cuda:0',max_len=512, backend_name='hf_llama'):
+    def __init__(self, arg, is_log_example = False, temperature = 0, device='cuda:0',max_len=512, max_new_tokens=100, backend_name='hf_auto', use_same_llm = False, llm=None):
 
         self.arg = arg
         self.model = arg.model
@@ -28,11 +28,17 @@ class Planner(object):
         self.log_dir = arg.logdir
         self.log_file_path = self.log_dir + "/planner_log.txt" 
         self.backend_name = backend_name
+        self.max_new_tokens = max_new_tokens
         self.backend = backends[backend_name]
-        self.tokenizer = self.backend['tokenize'].from_pretrained(self.model)
-        self.llm = self.backend['model'].from_pretrained(
-            self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map="cuda"
-        )
+        self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
+        if not use_same_llm:
+            self.llm = self.backend['model'].from_pretrained(
+                self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map="cuda"
+            )
+        elif llm is not None:
+            self.llm = llm
+        else:
+            raise ValueError("llm is None")
         self.max_len = max_len
         self.is_log_example = is_log_example
 
@@ -120,23 +126,23 @@ class Planner(object):
         self.write_content(content= content, is_append=True)
 
     
-        question_text = "Q: {}".format(question)
 
-        question_tokens = self.tokenizer.encode(question_text, return_tensors="pt").to(
-            self.device
-        )
-        generated_tokens = self.llm.generate(
-        question_tokens,
+        pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
+        inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=3000).to(self.device)
+        del pre_tokens
+        outputs = self.llm.generate(
+        inputs.input_ids,
         top_k=128,
-        max_length=self.max_len,
-        num_return_sequences=1,
-        output_scores=True,
-        output_hidden_states=True,
-        output_attentions=True,
+        max_new_tokens=self.max_new_tokens,
+        output_logits=False, 
+        output_hidden_states=False,
+        output_attentions=False,
         return_dict_in_generate=True,
+        pad_token_id=self.tokenizer.eos_token_id,
+        attention_mask = inputs.attention_mask,
         )
-        len_question_tokens = len(question_tokens[0])
-        generated_tokens = generated_tokens.sequences[0][len_question_tokens:]
+        len_question_tokens = len(inputs[0])
+        generated_tokens = outputs.sequences[0][len_question_tokens:]
         generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
 
         response_content = generated_text

@@ -498,20 +498,23 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
 
 if __name__=="__main__":
 
-    # Openai Key (please replace with your own key)
-    # openai.api_key = 'YOUR-KEY'
   
     parser = argparse.ArgumentParser(description="LLM-Task-Planner")
     parser.add_argument('--domain', type=str, choices=DOMAINS, default="blocksworld")
     parser.add_argument('--method', type=str, choices=METHODS, default="LLM_trans_exact_feedback")
-    parser.add_argument('--model', type=str, choices=MODELS, default="circulus/alpaca-7b")
-    parser.add_argument('--max_len', type=int, default=1024)
-    
+    parser.add_argument('--model', type=str, choices=MODELS, default="meta-llama/Llama-3.1-8B-Instruct")
+    parser.add_argument('--max_len', type=int, default=3000)
+    parser.add_argument('--temperature', type=float, default=0.0)
+    parser.add_argument('--max_new_tokens', type=int, default=256)
+    parser.add_argument('--backend', type=str, default="hf_auto")
+    parser.add_argument('--device', type=str, default="cuda:0")
     parser.add_argument('--logdir', type=str, default=None)
     parser.add_argument('--num_objects', type=int, choices=[3,4], default=3)
     parser.add_argument('--num_trans_example', type=int, choices=[1,2,3], default=3)
     parser.add_argument('--num_plan_example', type=int, choices=[3,4,5], default=4)
     parser.add_argument('--num_valid_example', type=int, choices=[4,5,6], default=6)
+    parser.add_argument('--use_same_llm', action='store_true')
+
 
     args = parser.parse_args()
 
@@ -523,14 +526,20 @@ if __name__=="__main__":
             os.makedirs(args.logdir)
 
     # Initialize translator
-    LLM_Translator = Translator(args, is_log_example=True)
-
+    LLM_Translator = Translator(args, is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
+    
     # Initialize planner
-    LLM_Planner = Planner(args, is_log_example=True)
+    if args.use_same_llm:
+        LLM_Planner = Planner(args, is_log_example=True, llm=LLM_Translator.llm, use_same_llm=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
+    else:
+        LLM_Planner = Planner(args, is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
 
     # Initialize validator 
     if args.method == "LLM_trans_self_feedback" or args.method == "LLM_no_trans_self_feedback":
-        LLM_Validator = Validator(args, is_log_example=True)
+        if args.use_same_llm:
+            LLM_Validator = Validator(args, is_log_example=True,llm = LLM_Translator.llm, use_same_llm=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
+        else:
+            LLM_Validator = Validator(args, is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
 
     # Initialize block simulator
     if args.domain == 'blocksworld':

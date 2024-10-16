@@ -1,6 +1,13 @@
 import os
 from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
+from transformers import LlamaTokenizer, LlamaForCausalLM, AutoTokenizer, AutoModelForCausalLM
 import torch
+
+luna_models= {  'tokenizer': LLaMATokenizer, 'model': LLaMAForCausalLM}
+hf_llama_models = { 'tokenizer': LlamaTokenizer, 'model': LlamaForCausalLM}
+hf_auto_models = { 'tokenizer': AutoTokenizer, 'model': AutoModelForCausalLM}
+
+backends = {'luna': luna_models, 'hf_llama': hf_llama_models, 'hf_auto': hf_auto_models}
 
 class Translator(object):
     """
@@ -9,7 +16,7 @@ class Translator(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, is_log_example = False, temperature = 0,device='cuda:0',max_len=512):
+    def __init__(self, arg, is_log_example = False, temperature = 0,device='cuda:0',max_len=512, backend_name='hf_auto', max_new_tokens=100):
         
         self.arg = arg
         self.model = arg.model
@@ -20,11 +27,10 @@ class Translator(object):
         self.is_log_example = is_log_example
         self.device= device
         self.max_len = max_len
-        self.tokenizer = LLaMATokenizer.from_pretrained(self.model)
-        self.llm = LLaMAForCausalLM.from_pretrained(
-            self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map=self.device
-        )
-        
+        self.backend = backends[backend_name]
+        self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
+        self.llm = self.backend['model'].from_pretrained(self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map="cuda")
+        self.max_new_tokens = max_new_tokens
         # root for prompt examples
         if self.arg.domain == 'blocksworld':
             self.max_examples = 3
@@ -99,23 +105,24 @@ class Translator(object):
         question.append(question_message)
         self.write_content(content= content, is_append=True)
 
-        question_text = content
-        # Translate description to PDDL domain and problem files
-        question_tokens = self.tokenizer.encode(question_text, return_tensors="pt").to(
-            self.device
-        )
-        generated_tokens = self.llm.generate(
-        question_tokens,
+    
+
+        pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
+        inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=2500).to(self.device)
+        del pre_tokens
+        outputs = self.llm.generate(
+        inputs.input_ids,
         top_k=128,
-        max_length=self.max_len,
-        num_return_sequences=1,
-        output_scores=True,
-        output_hidden_states=True,
-        output_attentions=True,
+        max_new_tokens=self.max_new_tokens,
+        output_logits=False, 
+        output_hidden_states=False,
+        output_attentions=False,
         return_dict_in_generate=True,
+        pad_token_id=self.tokenizer.eos_token_id,
+        attention_mask = inputs.attention_mask,
         )
-        len_question_tokens = len(question_tokens[0])
-        generated_tokens = generated_tokens.sequences[0][len_question_tokens:]
+        len_question_tokens = len(inputs[0])
+        generated_tokens = outputs.sequences[0][len_question_tokens:]
         generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
 
         response_content = generated_text
