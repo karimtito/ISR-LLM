@@ -15,7 +15,7 @@ from Cooking_Sim.Cooking_Sim import CookingSim
 
 DOMAINS = ["blocksworld", "ballmoving", "cooking"]
 METHODS = ["LLM_trans_self_feedback", "LLM_trans_no_feedback", "LLM_trans_exact_feedback", "LLM_no_trans", "LLM_no_trans_self_feedback"]
-MODELS = ["gpt-3.5-turbo","gpt-4", "gpt-3.5-turbo-16k","circulus/alpaca-7b"]
+MODELS = ["gpt-3.5-turbo","gpt-4", "gpt-3.5-turbo-16k","/alpaca-7b"]
 
 # LLM planning without PDDL translator
 def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine,
@@ -302,10 +302,10 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
             else:
                 temperature = min(max_refine_temperature, 0.1*i)
             response_planner = LLM_Planner.query(planning_problem, is_append = True, temperature = temperature)
-            # print(response_planner)
+            print(response_planner)
 
             # LLM planner
-            action_sequence = response_planner.choices[0].message.content
+            action_sequence = response_planner
 
             # simulate actions
             print("Attempt", j)
@@ -507,7 +507,7 @@ if __name__=="__main__":
     parser.add_argument('--temperature', type=float, default=0.0)
     parser.add_argument('--max_new_tokens', type=int, default=256)
     parser.add_argument('--backend', type=str, default="hf_auto")
-    parser.add_argument('--device', type=str, default="cuda:0")
+    parser.add_argument('--device', type=str, default=":0")
     parser.add_argument('--logdir', type=str, default=None)
     parser.add_argument('--num_objects', type=int, choices=[3,4], default=3)
     parser.add_argument('--num_trans_example', type=int, choices=[1,2,3], default=3)
