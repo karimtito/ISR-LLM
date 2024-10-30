@@ -1,8 +1,15 @@
 import os
-### replace openai with transformers library from hugging face
 from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
-#import transformers
+from transformers import LlamaTokenizer, LlamaForCausalLM, AutoTokenizer, AutoModelForCausalLM
 
+import torch
+
+
+luna_models= {  'tokenizer': LLaMATokenizer, 'model': LLaMAForCausalLM}
+hf_llama_models = { 'tokenizer': LlamaTokenizer, 'model': LlamaForCausalLM}
+hf_auto_models = { 'tokenizer': AutoTokenizer, 'model': AutoModelForCausalLM}
+
+backends = {'luna': luna_models, 'hf_llama': hf_llama_models, 'hf_auto': hf_auto_models}
 
 class Validator(object):
     """
@@ -11,14 +18,28 @@ class Validator(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, is_log_example = False, temperature = 0):
-        
+    def __init__(self, arg, is_log_example = False, temperature = 0, device='cuda:0',max_len=512, max_new_tokens=100, backend_name='hf_auto', use_same_llm = False, llm=None):
+
         self.arg = arg
         self.model = arg.model
         self.temperature = temperature
+        self.device=device
         self.messages = None
         self.log_dir = arg.logdir
-        self.log_file_path = self.log_dir + "/validator_log.txt"
+        self.log_file_path = self.log_dir + "/validator_log.txt" 
+        self.backend_name = backend_name
+        self.max_new_tokens = max_new_tokens
+        self.backend = backends[backend_name]
+        self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
+        if not use_same_llm:
+            self.llm = self.backend['model'].from_pretrained(
+                self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map="auto"
+            )
+        elif llm is not None:
+            self.llm = llm
+        else:
+            raise ValueError("llm is None")
+        self.max_len = max_len
         self.is_log_example = is_log_example
         #self.pipepline = transformers.pipelines( )
         
@@ -92,6 +113,7 @@ class Validator(object):
     def query(self, content, is_append = False):
 
         # add new question to message list
+        # add new question to message list
         question_message = {"role": "user", "content": content}
         if is_append == False:
             question = self.messages.copy()
@@ -100,12 +122,32 @@ class Validator(object):
         question.append(question_message)
         self.write_content(content= content, is_append=True)
 
-        #response = openai.ChatCompletion.create(model=self.model, messages=question, temperature=self.temperature)
-        response = self.llm
-        response_content = response["choices"][0]["message"]["content"]
-        self.write_content(content= response_content, is_append=True)
+    
 
-        return response
+        pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
+        inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=2500).to(self.device)
+        del pre_tokens
+        outputs = self.llm.generate(
+        inputs.input_ids,
+        top_k=256,
+        max_new_tokens=self.max_new_tokens,
+        output_logits=False, 
+        output_hidden_states=False,
+        output_attentions=False,
+        return_dict_in_generate=True,
+        pad_token_id=self.tokenizer.eos_token_id,
+        attention_mask = inputs.attention_mask,
+        )
+        len_question_tokens = len(inputs[0])
+        generated_tokens = outputs.sequences[0][len_question_tokens:]
+        generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
+
+        response_content = generated_text
+        self.write_content(content= response_content, is_append=True)
+      
+
+
+        return response_content
 
 
         

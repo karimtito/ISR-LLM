@@ -6,12 +6,13 @@ import time
 import re
 
 from utils.utils import *
-from LLM.Translator.Translator import Translator
-from LLM.Planner.Planner import Planner
-from LLM.Validator.Validator import Validator
+from Translator.Translator import Translator
+from Planner.Planner import Planner
+from Validator.Validator import Validator
 from Blocks_Sim.Block_Sim import BlockSim
 from BallMoving_Sim.BallMoving_Sim import BallMovingSim
 from Cooking_Sim.Cooking_Sim import CookingSim
+
 
 DOMAINS = ["blocksworld", "ballmoving", "cooking"]
 METHODS = ["LLM_trans_self_feedback", "LLM_trans_no_feedback", "LLM_trans_exact_feedback", "LLM_no_trans", "LLM_no_trans_self_feedback"]
@@ -20,11 +21,11 @@ MODELS = ["meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-3.2-3B-Instruct"
 # LLM planning without PDDL translator
 def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine,
                                   max_refine_temperature, num_prompt_examples_dataset, 
-                                  test_log_file_path, gpt_api_wait_time):
+                                  test_log_file_path, gpt_api_wait_time,scenario_simulartor, LLM_Planner, LLM_Validator, LLM_Translator,):
 
-    for i in range(num_test):
+
     # test loop
-        
+    for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
         time.sleep(gpt_api_wait_time)
@@ -66,7 +67,7 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
             # print(response_planner)
 
             # LLM planner
-            action_sequence = response_planner['content']
+            action_sequence = response_planner
 
             # simulate actions
             print("Attempt", j)
@@ -494,119 +495,3 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
 
         with open(test_log_file_path, "a") as f:
             f.write("End of test case " + str(i+num_prompt_examples_dataset) + "\n\n\n")
-
-
-if __name__=="__main__":
-
-  
-    parser = argparse.ArgumentParser(description="LLM-Task-Planner")
-    parser.add_argument('--domain', type=str, choices=DOMAINS, default="blocksworld")
-    parser.add_argument('--method', type=str, choices=METHODS, default="LLM_trans_exact_feedback")
-    parser.add_argument('--model', type=str, choices=MODELS, default="meta-llama/Llama-3.1-8B-Instruct")
-    parser.add_argument('--max_len', type=int, default=3000)
-    parser.add_argument('--temperature', type=float, default=0.0)
-    parser.add_argument('--max_new_tokens', type=int, default=256)
-    parser.add_argument('--backend', type=str, default="hf_auto")
-    parser.add_argument('--device', type=str, default="0")
-    parser.add_argument('--logdir', type=str, default=None)
-    parser.add_argument('--num_objects', type=int, choices=[3,4], default=3)
-    parser.add_argument('--num_trans_example', type=int, choices=[1,2,3], default=3)
-    parser.add_argument('--num_plan_example', type=int, choices=[3,4,5], default=4)
-    parser.add_argument('--num_valid_example', type=int, choices=[4,5,6], default=6)
-    parser.add_argument('--use_same_llm', action='store_true',default=True)
-
-
-    args = parser.parse_args()
-
-    # initialize log dir
-    if args.logdir == None:
-        args.logdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run_log/")
-        args.logdir = args.logdir + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        if not os.path.exists(args.logdir):
-            os.makedirs(args.logdir)
-
-    # Initialize translator
-    LLM_Translator = Translator(args, model=args.model, is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
-    
-    # Initialize planner
-    if args.use_same_llm:
-        LLM_Planner = Planner(args, model=args.model, is_log_example=True, llm=LLM_Translator.llm, use_same_llm=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
-    else:
-        LLM_Planner = Planner(args, model=args.model,  is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
-
-    # Initialize validator 
-    if args.method == "LLM_trans_self_feedback" or args.method == "LLM_no_trans_self_feedback":
-        if args.use_same_llm:
-            LLM_Validator = Validator(args, is_log_example=True,llm = LLM_Translator.llm, use_same_llm=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
-        else:
-            LLM_Validator = Validator(args, is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
-
-    # Initialize block simulator
-    if args.domain == 'blocksworld':
-        scenario_simulator = BlockSim()
-
-    elif args.domain == 'ballmoving':
-        scenario_simulator = BallMovingSim()
-
-    elif args.domain == 'cooking':
-        scenario_simulator = CookingSim()
-
-
-    ###############################################
-    # load test scenarios
-    test_initial_state, test_goal_state = load_test_scenarios(args)
-
-    # run test
-    num_test = 10
-    num_prompt_examples_dataset = 3 # the first n examples are in the prompt example, so skip them
-    max_num_refine = 10  # max number of refinement, if it is 0 -> no feedback
-    gpt_api_wait_time = 0.1 # wait time during gpt api call for preventing overload
-    max_refine_temperature = 0.4 # maximal value of refine temperature
-
-    # test log
-    test_log_file_path = args.logdir + "/test_log.txt"
-    with open(test_log_file_path, "w") as f:
-        if args.domain == "blocksworld":
-            f.write("Test log for "+ args.domain + " with " + str(args.num_objects) + " blocks." +"\n")
-        elif args.domain == "ballmoving":
-            f.write("Test log for "+ args.domain + " with " + str(args.num_objects) + " balls." +"\n")
-        elif args.domain == "cooking":
-            f.write("Test log for "+ args.domain + " with " + str(args.num_objects) + " pots." +"\n")
-
-
-    if args.method == "LLM_trans_no_feedback":
-
-        # if no feedback, use the output directly, same method but no feedback is generated
-        max_num_refine = 0
-        test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test, max_num_refine, 
-                                max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time)
-
-    elif args.method == "LLM_trans_exact_feedback":
-
-        test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test, max_num_refine, 
-                                max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time)
-
-    elif args.method == "LLM_trans_self_feedback":
-
-        test_LLM_trans_self_feedback(args.domain, test_initial_state, test_goal_state, num_test, max_num_refine, 
-                                max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time)
-
-    elif args.method == "LLM_no_trans":
-
-        max_num_refine = 10
-        test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine, 
-                                max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time)
-
-    elif args.method == "LLM_no_trans_self_feedback":
-
-        test_LLM_no_trans_self_feedback(args.domain, test_initial_state, test_goal_state, num_test, max_num_refine, 
-                                max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time)
-
-    else:
-
-        raise ValueError("Method not implemented.")
-
-
-
-
-

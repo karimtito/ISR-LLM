@@ -18,22 +18,33 @@ class Planner(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, is_log_example = False, temperature = 0, device='cuda:0',max_len=512, max_new_tokens=100, backend_name='hf_auto', use_same_llm = False, llm=None):
+    def __init__(self, arg, model, is_log_example = False, temperature = 0, device = None,max_len = 512, max_new_tokens = 100,
+                 backend_name = 'hf_auto', use_same_llm = False, llm=None, output_hidden_states = False, output_attentions = False, 
+                 output_logits = False, device_map = "auto"):
 
         self.arg = arg
-        self.model = arg.model
+        self.model =    model
         self.temperature = temperature
-        self.device=device
+        self.device = device
         self.messages = None
         self.log_dir = arg.logdir
         self.log_file_path = self.log_dir + "/planner_log.txt" 
         self.backend_name = backend_name
         self.max_new_tokens = max_new_tokens
         self.backend = backends[backend_name]
+        self.output_hidden_states = output_hidden_states
+        self.output_attentions = output_attentions
+        self.output_logits = output_logits
+        #device ovverides device_map
+        if device is not None:
+            self.device_map = device
+            self.device = device
+        else:
+            self.device_map = device_map
         self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
         if not use_same_llm:
             self.llm = self.backend['model'].from_pretrained(
-                self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map="cuda"
+                self.model, low_cpu_mem_usage = True, torch_dtype = torch.float16, device_map = self.device_map,
             )
         elif llm is not None:
             self.llm = llm
@@ -132,20 +143,25 @@ class Planner(object):
         del pre_tokens
         outputs = self.llm.generate(
         inputs.input_ids,
-        top_k=128,
-        max_new_tokens=self.max_new_tokens,
-        output_logits=False, 
-        output_hidden_states=False,
-        output_attentions=False,
-        return_dict_in_generate=True,
-        pad_token_id=self.tokenizer.eos_token_id,
+        top_k = 256,
+        max_new_tokens = self.max_new_tokens,
+        output_logits = self.output_logits, 
+        output_hidden_states = self.output_hidden_states,
+        output_attentions = self.output_attentions,
+        return_dict_in_generate = True,
+        pad_token_id = self.tokenizer.eos_token_id,
         attention_mask = inputs.attention_mask,
+        
+        
         )
         len_question_tokens = len(inputs[0])
         generated_tokens = outputs.sequences[0][len_question_tokens:]
         generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
+        self.write_content(content= generated_text, is_append=True)
+        response= {'content':generated_text,'response_tokens':generated_tokens,"input_tokens":inputs.input_ids[0]}
+        if self.output_hidden_states:
+            response['hidden_states'] = outputs.hidden_states
+        if self.output_attentions:
+            response['attentions'] = outputs.attentions
 
-        response_content = generated_text
-        self.write_content(content= response_content, is_append=True)
-
-        return response_content
+        return response
