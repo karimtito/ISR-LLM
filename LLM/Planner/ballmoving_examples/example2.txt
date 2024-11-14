@@ -15,13 +15,13 @@ Domain file:
 (:action pick
   :parameters  (?r - robot ?b - ball ?room - room)
   :precondition  (and (at ?b ?room) (robot-at ?r ?room) (arm-empty))
-  :effect (and (carry ?r ?b) (not (arm-empty)) (not (at ?b ?room))
+  :effect (and (carry ?r ?b) (not (arm-empty)) (not (at ?b ?room)))
 )
 (:action drop
   :parameters  (?r - robot ?b -ball ?room -room)
   :precondition (and (carry ?r ?b) (robot-at ?r ?room))
   :effect (and (arm-empty) (at ?b ?room) (not (carry ?r ?b)))
-)
+))
 Problem file:
 (define (problem fiveballs)
 (:domain ballmoving)
@@ -44,7 +44,7 @@ ball1 ball2 ball3 ball4 ball5 - ball)
 (at ball3 room4)
 (at ball4 room2)
 (at ball5 room1))
-)
+))
 
 Action Sequence:
 Step 1: 

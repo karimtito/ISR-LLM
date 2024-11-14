@@ -45,7 +45,7 @@ Problem file:
 (on b2 b3)
 (on b3 b1)
 (on-table b1))
-)
+))
 
 Action Sequence:
 We need to build the blocks from bottom to top.

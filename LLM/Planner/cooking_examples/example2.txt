@@ -21,7 +21,7 @@ Domain file:
   :parameters  (?i - ingredient ?p - pot)
   :precondition (and (holding ?i -ingredient))
   :effect (and (not (pot-empty ?p)) (contain ?p ?i))
-)
+))
 Problem file:
 (define (problem fivepots)
 (:domain cooking)
@@ -53,7 +53,7 @@ ingredient1 ingredient2 ingredient3 ingredient4 ingredient5 ingredient6 - ingred
 (contain pot5 ingredient3)
 (contain pot5 ingredient4)
 (contain pot5 ingredient5))
-)
+))
 
 Action Sequence:
 Step 1: ingredient1 is needed in pot2, pot4, pot5

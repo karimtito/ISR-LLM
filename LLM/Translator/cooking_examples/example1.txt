@@ -23,7 +23,7 @@ Domain file:
   :parameters  (?i - ingredient ?p - pot)
   :precondition (and (holding ?i -ingredient))
   :effect (and (not (pot-empty ?p)) (contain ?p ?i))
-)
+))
 Problem file:
 (define (problem fourpots)
 (:domain cooking)
@@ -49,4 +49,4 @@ ingredient1 ingredient2 ingredient3 ingredient4 ingredient5 ingredient6 - ingred
 (contain pot4 ingredient2)
 (contain pot4 ingredient4)
 (contain pot4 ingredient6))
-)
+))

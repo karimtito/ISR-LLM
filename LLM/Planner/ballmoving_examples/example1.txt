@@ -16,7 +16,7 @@ Domain file:
   :parameters  (?r - robot ?b - ball ?room - room)
   :precondition  (and (at ?b ?room) (robot-at ?r ?room) (arm-empty))
   :effect (and (carry ?r ?b) (not (arm-empty)) (not (at ?b ?room))
-)
+))
 (:action drop
   :parameters  (?r - robot ?b -ball ?room -room)
   :precondition (and (carry ?r ?b) (robot-at ?r ?room))
@@ -42,7 +42,7 @@ ball1 ball2 ball3 ball4 - ball)
 (at ball2 room2)
 (at ball3 room4)
 (at ball4 room4))
-)
+))
 
 Action Sequence:
 Step 1: 
