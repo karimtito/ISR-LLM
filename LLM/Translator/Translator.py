@@ -1,13 +1,12 @@
 import os
-from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
+
 from transformers import LlamaTokenizer, LlamaForCausalLM, AutoTokenizer, AutoModelForCausalLM
 import torch
 
-luna_models= {  'tokenizer': LLaMATokenizer, 'model': LLaMAForCausalLM}
 hf_llama_models = { 'tokenizer': LlamaTokenizer, 'model': LlamaForCausalLM}
 hf_auto_models = { 'tokenizer': AutoTokenizer, 'model': AutoModelForCausalLM}
 
-backends = {'luna': luna_models, 'hf_llama': hf_llama_models, 'hf_auto': hf_auto_models}
+backends = {'hf_llama': hf_llama_models, 'hf_auto': hf_auto_models}
 
 class Translator(object):
     """
