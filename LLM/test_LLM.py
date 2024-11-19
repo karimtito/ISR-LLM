@@ -28,7 +28,7 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time)
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -49,7 +49,7 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
@@ -137,7 +137,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time)
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -160,7 +160,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
@@ -200,7 +200,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
             with open(test_log_file_path, "a") as f:
                 f.write(validate_question +"\n")
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             response_validator = LLM_Validator.query(validate_question, is_append=False)
             response_validator_content = response_validator
@@ -264,7 +264,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time)
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -288,7 +288,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
@@ -375,7 +375,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time)
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -402,7 +402,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
@@ -442,7 +442,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
             with open(test_log_file_path, "a") as f:
                 f.write(validate_question +"\n")
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             response_validator = LLM_Validator.query(validate_question, is_append=False)
             response_validator_content = response_validator["choices"][0]["message"]["content"]

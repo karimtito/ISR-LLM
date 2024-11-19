@@ -21,13 +21,14 @@ MODELS = ["meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-3.2-3B-Instruct"
 def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine,
                                   max_refine_temperature, num_prompt_examples_dataset, 
                                   test_log_file_path, gpt_api_wait_time):
-
+    nb_tot_attempt = 0
+    nb_total_errors = 0
     for i in range(num_test):
     # test loop
         
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time) not needed with open-source models
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -36,7 +37,7 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
         description = scenario_simulator.generate_scene_description(initial_state= initial_state,
                                                         goal_state = goal_state, 
                                                         constraint = None)
-
+        
         print(i + num_prompt_examples_dataset, description)
 
         with open(test_log_file_path, "a") as f:
@@ -48,9 +49,10 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
+            nb_tot_attempt+=1
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
 
             with open(test_log_file_path, "a") as f:
@@ -69,6 +71,8 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
             action_sequence = response_planner['content']
 
             # simulate actions
+            print(f"Total nb of attempts: {nb_tot_attempt}")
+            print(f"Cumulative error rate: {(nb_total_errors/ nb_tot_attempt)*100} %")
             print("Attempt", j)
             print(action_sequence)
             with open(test_log_file_path, "a") as f:
@@ -80,7 +84,7 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
 
             # if error is found
             if is_error == True:
-
+                nb_total_errors+=1
                 if is_satisfied == False:
 
                     # some action is wrong
@@ -136,7 +140,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time)
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -159,7 +163,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
@@ -168,10 +172,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
                 f.write("Attempt: " + str(j) + "\n")
 
             # LLM planner
-            if i == 0: 
-                temperature = 0
-            else:
-                temperature = min(max_refine_temperature, 0.1*i)
+            
             response_planner = LLM_Planner.query(planning_problem, is_append = True, temperature = temperature)
             # print(response_planner)
 
@@ -199,7 +200,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
             with open(test_log_file_path, "a") as f:
                 f.write(validate_question +"\n")
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             response_validator = LLM_Validator.query(validate_question, is_append=False)
             response_validator_content = response_validator
@@ -263,7 +264,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time)
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -273,7 +274,8 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
                                                         goal_state = goal_state, 
                                                         constraint = None)
 
-        print(i + num_prompt_examples_dataset, description)
+        print(f"Test case {i + num_prompt_examples_dataset}/{num_test}:")
+        print(f"Desc: {description}")
 
         with open(test_log_file_path, "a") as f:
             f.write("Test case index: " + str(i+num_prompt_examples_dataset) + "\n")
@@ -281,13 +283,15 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
 
         # LLM translator
         response_translator = LLM_Translator.query(description, is_append = False)
-        planning_problem = response_translator
-        # print(response_translator)
+        
+        planning_problem = response_translator["content"]
+        
+        print(f"LLM-Translation: \n {planning_problem}")
 
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
@@ -301,12 +305,14 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
                 temperature = 0
             else:
                 temperature = min(max_refine_temperature, 0.1*i)
-            response_planner = LLM_Planner.query(planning_problem, is_append = True, temperature = temperature)
-            print(response_planner)
+            response = LLM_Planner.query(planning_problem, is_append = True, temperature = temperature)
+            actions = response["content"]
+            
 
             # LLM planner
-            action_sequence = response_planner
+            action_sequence = response["content"]
 
+            #print(f"Response: \n {action_sequence}") 
             # simulate actions
             print("Attempt", j)
             print(action_sequence)
@@ -374,7 +380,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
-        time.sleep(gpt_api_wait_time)
+        #time.sleep(gpt_api_wait_time)
 
         initial_state = test_initial_state[i + num_prompt_examples_dataset, :]
         goal_state = test_goal_state[i + num_prompt_examples_dataset, :]
@@ -401,7 +407,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
         # refine loop
         for j in range(max_num_refine + 1):
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             # (re-)initialize block sim
             scenario_simulator.initialize_state(initial_state= initial_state, goal_state = goal_state, constraint = None)
@@ -441,7 +447,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
             with open(test_log_file_path, "a") as f:
                 f.write(validate_question +"\n")
 
-            time.sleep(gpt_api_wait_time)
+            #time.sleep(gpt_api_wait_time)
 
             response_validator = LLM_Validator.query(validate_question, is_append=False)
             response_validator_content = response_validator["choices"][0]["message"]["content"]
@@ -505,9 +511,9 @@ if __name__=="__main__":
     parser.add_argument('--model', type=str, choices=MODELS, default="meta-llama/Llama-3.1-8B-Instruct")
     parser.add_argument('--max_len', type=int, default=3000)
     parser.add_argument('--temperature', type=float, default=0.0)
-    parser.add_argument('--max_new_tokens', type=int, default=256)
+    parser.add_argument('--max_new_tokens', type=int, default=1024)
     parser.add_argument('--backend', type=str, default="hf_auto")
-    parser.add_argument('--device', type=str, default="0")
+    parser.add_argument('--device', type=str, default="cuda:0")
     parser.add_argument('--logdir', type=str, default=None)
     parser.add_argument('--num_objects', type=int, choices=[3,4], default=3)
     parser.add_argument('--num_trans_example', type=int, choices=[1,2,3], default=3)
@@ -524,15 +530,23 @@ if __name__=="__main__":
         args.logdir = args.logdir + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         if not os.path.exists(args.logdir):
             os.makedirs(args.logdir)
-
+    if len(args.device) == 1:
+        if args.device in ['0', '1', '2', '3']:
+            args.device = "cuda:" + args
+        else:
+            args.device = "cuda:0"
     # Initialize translator
-    LLM_Translator = Translator(args, model=args.model, is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
+    LLM_Translator = Translator(args, model=args.model, is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens,
+                                device = args.device)
+    
     
     # Initialize planner
     if args.use_same_llm:
-        LLM_Planner = Planner(args, model=args.model, is_log_example=True, llm=LLM_Translator.llm, use_same_llm=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
+        LLM_Planner = Planner(args, model=args.model, is_log_example=True, llm=LLM_Translator.llm, use_same_llm=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens,
+                              device = args.device)
     else:
-        LLM_Planner = Planner(args, model=args.model,  is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens)
+        LLM_Planner = Planner(args, model=args.model,  is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens,
+                              device = args.device)
 
     # Initialize validator 
     if args.method == "LLM_trans_self_feedback" or args.method == "LLM_no_trans_self_feedback":

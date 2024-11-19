@@ -123,7 +123,7 @@ class BlockSim(object):
     def simulate_actions(self, action_sequence, test_log_file_path):
 
         actions = re.findall(r'\(.*?\)', action_sequence)
-        print(actions)
+        print(f"Action plan: {actions}")
         num_actions = len(actions)
 
         is_error = None
@@ -240,9 +240,32 @@ class BlockSim(object):
 
         is_error = False
         error_message = None
+        obj1 = action[1].strip('()')
+        obj2 = action[2].strip('()')
+        print(f"action: {action}")
+        #check if action first object is of the form bX where X is a number
+        
+        if obj1[0] != 'b' or not obj1[1:].isdigit():
+            is_error = True
+            error_message = f"First object {obj1} in action is not of the form bX where X is a number. Please replace it by a valid block."
+            return is_error, error_message
+        #check if action second object is of the form bX where X is a number
+        if obj2[0] != 'b' or not obj2[1:].isdigit():
+            is_error = True
+            error_message = f"Second object {obj2} in action is not of the form bX where X is a number. Please replace it by a valid block."
+            return is_error, error_message
+        b1_index = int(obj1[1])
+        b2_index = int(obj2[1])
+        
+        if b1_index not in range(1, self.num_blocks+1):
+            is_error = True
+            error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
+            return is_error, error_message
 
-        b1_index = int(action[1][1])
-        b2_index = int(action[2][1])
+        if b2_index not in range(1, self.num_blocks+1):
+            is_error = True
+            error_message = f"Block b{b2_index} is not a valid block as index {b2_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
+            return is_error, error_message
 
         # check if pre-conditions are satisfied
         # hand is empty
@@ -282,12 +305,36 @@ class BlockSim(object):
 
     # stack b1 on b2
     def stack(self, action):
-
+        print(f"action: {action}")
         is_error = False
+        obj1 = action[1].strip('()')
+        obj2 = action[2].strip('()')
         error_message = None
+         #check if action first object is of the form bX where X is a number
+        if obj1[0] != 'b' or not obj1[1:].isdigit():
+            is_error = True
+            error_message = f"First object {obj1} in action is not of the form bX where X is a number. Please replace it by a valid block."
+            return is_error, error_message
+        #check if action second object is of the form bX where X is a number
+        if obj2[0] != 'b' or not obj2[1:].isdigit():
+            is_error = True
+            error_message = f"Second object {obj2} in action is not of the form bX where X is a number. Please replace it by a valid block."
+            return is_error, error_message
+        
+        #extract the block indices
+        b1_index = int(obj1[1])
+        b2_index = int(obj2[1])
+        
+        if b1_index not in range(1, self.num_blocks+1):
+            is_error = True
+            error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
+            return is_error, error_message
 
-        b1_index = int(action[1][1])
-        b2_index = int(action[2][1])
+        if b2_index not in range(1, self.num_blocks+1):
+            is_error = True
+            error_message = f"Block b{b2_index} is not a valid block as index {b2_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
+            return is_error, error_message
+    
 
         # check if pre-conditions are satisfied
         # hand is not empty

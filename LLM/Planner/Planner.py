@@ -41,6 +41,7 @@ class Planner(object):
             self.device = device
         else:
             self.device_map = device_map
+        
         self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
         if not use_same_llm:
             self.llm = self.backend['model'].from_pretrained(
@@ -52,7 +53,7 @@ class Planner(object):
             raise ValueError("llm is None")
         self.max_len = max_len
         self.is_log_example = is_log_example
-
+        
         # root for prompt examples
         if self.arg.domain == 'blocksworld':
             self.max_examples = 5
@@ -134,6 +135,7 @@ class Planner(object):
         else:
             question = self.messages
         question.append(question_message)
+ 
         self.write_content(content= content, is_append=True)
 
     
@@ -141,9 +143,10 @@ class Planner(object):
         pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
         inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=3000).to(self.device)
         del pre_tokens
+        #print(f"current device: {self.device}")
         outputs = self.llm.generate(
         inputs.input_ids,
-        top_k = 256,
+        top_k = 128,
         max_new_tokens = self.max_new_tokens,
         output_logits = self.output_logits, 
         output_hidden_states = self.output_hidden_states,
