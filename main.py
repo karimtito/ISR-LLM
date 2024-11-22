@@ -15,14 +15,15 @@ from Cooking_Sim.Cooking_Sim import CookingSim
 
 DOMAINS = ["blocksworld", "ballmoving", "cooking"]
 METHODS = ["LLM_trans_self_feedback", "LLM_trans_no_feedback", "LLM_trans_exact_feedback", "LLM_no_trans", "LLM_no_trans_self_feedback"]
-MODELS = ["meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-3.2-3B-Instruct"]
+MODELS = ["meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-3.2-3B-Instruct","mistralai/Mistral-Nemo-Instruct-2407"]
 
 # LLM planning without PDDL translator
 def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine,
                                   max_refine_temperature, num_prompt_examples_dataset, 
-                                  test_log_file_path, gpt_api_wait_time):
+                                  test_log_file_path, gpt_api_wait_time, print_states = False):
     nb_tot_attempt = 0
     nb_total_errors = 0
+    nb_success = 0
     for i in range(num_test):
     # test loop
         
@@ -80,9 +81,11 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
                 f.write("Analysis: " +"\n")
 
             # validation using external simulation
-            is_satisfied, is_error, error_message, error_action = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
-
-            # if error is found
+            is_satisfied, is_error, error_message, error_action, states = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+            if print_states:
+                for i in range(len(states)):
+                    print(f"State {i}: {states[i]}")
+            # if error is found 
             if is_error == True:
                 nb_total_errors+=1
                 if is_satisfied == False:
@@ -119,10 +122,10 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
 
             # if no error found
             else:
-
+                nb_success+=1
                 # exit refine loop
                 break
-
+        print(f"Success rate: {(nb_success/num_test)*100} %")
         # reinitialize planner for next case
         LLM_Planner.init_messages(is_reinitialize = True)
 
@@ -133,9 +136,9 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
 # LLM planning without PDDL translator and using self feedback
 def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state, num_test, max_num_refine,
                                   max_refine_temperature, num_prompt_examples_dataset, 
-                                  test_log_file_path, gpt_api_wait_time):
-
-
+                                  test_log_file_path, gpt_api_wait_time, print_states = False):
+    nb_tot_attempt = 0
+    nb_total_errors = 0
     # test loop
     for i in range(num_test):
 
@@ -246,7 +249,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
         print("Actual analysis:")
         with open(test_log_file_path, "a") as f:
             f.write("Actual analysis:\n")
-        is_satisfied, is_error, error_message, error_action = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+        is_satisfied, is_error, error_message, error_action, states = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
 
         # reinitialize planner for next case
         LLM_Planner.init_messages(is_reinitialize = True)
@@ -257,10 +260,11 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
 # LLM planning with PDDL translator and using exact feedback from external validator
 def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test, max_num_refine,
                                   max_refine_temperature, num_prompt_examples_dataset, 
-                                  test_log_file_path, gpt_api_wait_time):
+                                  test_log_file_path, gpt_api_wait_time, print_states = False):
 
 
     # test loop
+    nb_total_errors = 0
     for i in range(num_test):
 
         # wait for every loop (gpt api has rpm limit)
@@ -321,11 +325,11 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
                 f.write("Analysis: " +"\n")
 
             # validation using external simulation
-            is_satisfied, is_error, error_message, error_action = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+            is_satisfied, is_error, error_message, error_action, states = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
 
             # if error is found
             if is_error == True:
-
+                nb_total_errors+=1
                 if is_satisfied == False:
 
                     # some action is wrong
@@ -373,7 +377,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
 # LLM planning with PDDL translator and using self feedback
 def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, num_test, max_num_refine,
                                   max_refine_temperature, num_prompt_examples_dataset, 
-                                  test_log_file_path, gpt_api_wait_time):
+                                  test_log_file_path, gpt_api_wait_time, print_states = False):
 
 
     # test loop
@@ -493,7 +497,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
         print("Actual analysis:")
         with open(test_log_file_path, "a") as f:
             f.write("Actual analysis:\n")
-        is_satisfied, is_error, error_message, error_action = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+        is_satisfied, is_error, error_message, error_action, states = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
 
         # reinitialize planner for next case
         LLM_Planner.init_messages(is_reinitialize = True)
@@ -520,6 +524,7 @@ if __name__=="__main__":
     parser.add_argument('--num_plan_example', type=int, choices=[3,4,5], default=4)
     parser.add_argument('--num_valid_example', type=int, choices=[4,5,6], default=6)
     parser.add_argument('--use_same_llm', action='store_true',default=True)
+    parser.add_argument('--print_states', action='store_true',default=False)
 
 
     args = parser.parse_args()
@@ -532,7 +537,7 @@ if __name__=="__main__":
             os.makedirs(args.logdir)
     if len(args.device) == 1:
         if args.device in ['0', '1', '2', '3']:
-            args.device = "cuda:" + args
+            args.device = "cuda:" + args.device
         else:
             args.device = "cuda:0"
     # Initialize translator
@@ -609,7 +614,7 @@ if __name__=="__main__":
 
         max_num_refine = 10
         test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine, 
-                                max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time)
+                                max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time, print_states = args.print_states)
 
     elif args.method == "LLM_no_trans_self_feedback":
 

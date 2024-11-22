@@ -117,14 +117,29 @@ class Planner(object):
                 self.messages.append(question_message)
                 if self.is_log_example == True and is_reinitialize == False:
                     self.write_content(content= question, is_append=True)
-
+             
+                    #
                 answer_message = {"role": "system", "name":"example_assistant", "content": answer}
                 self.messages.append(answer_message)  
                 if self.is_log_example == True and is_reinitialize == False:
                     self.write_content(content= answer, is_append=True)
+        
+        if "mistral" in self.model:
+            # for mistral model, only one system call is allowed, those all previous messages must be merged into one
+            total_sys_content = self.messages[0]["content"] + '\n'
+            for message in self.messages[1:]:
+            
+                if message["name"] == "example_user":
+                    total_sys_content += "Example question:" + '\n' + message["content"] + "\n"
+                elif message["name"] == "example_assistant":
+                    total_sys_content += "Example answer:" + "\n" + message["content"] + "\n"
+                
+            self.messages = [{"role": "system", "content": total_sys_content}]
+
+                        
 
     # Query question message
-    def query(self, content, is_append = False, temperature = None):
+    def query(self, content, is_append = False, temperature = 0.0):
 
         # add new question to message list
         question_message = {"role": "user", "content": content}
@@ -154,10 +169,12 @@ class Planner(object):
         attention_mask = inputs.attention_mask,
         
         
+        
         )
         len_question_tokens = len(inputs[0])
         generated_tokens = outputs.sequences[0][len_question_tokens:]
         generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
+        self.messages.append({"role": "assistant", "content": generated_text})
         self.write_content(content= generated_text, is_append=True)
         response= {'content':generated_text,'response_tokens':generated_tokens,"input_tokens":inputs.input_ids[0]}
         if self.output_hidden_states:

@@ -134,8 +134,9 @@ class BallMovingSim(object):
         return goal_actual
 
     # Simulate given action sequence
-    def simulate_actions(self, action_sequence, test_log_file_path):
+    def simulate_actions(self, action_sequence, test_log_file_path, store_states = True):
 
+        states = [self.object_state.copy()]
         # extract valid actions
         actions = re.findall(r'\(.*?\)', action_sequence)
         filtered_actions = []
@@ -198,7 +199,9 @@ class BallMovingSim(object):
                     f.write("Error: "+ error_message +"\n")
 
                 break
-
+            # store new state
+            if store_states == True:
+                states.append(self.object_state.copy())
             # check if goal state is satisfied
             is_goal_satisfied = np.array_equal(self.goal_state, self.object_state[1:])
             if is_goal_satisfied:
@@ -235,7 +238,7 @@ class BallMovingSim(object):
                     f.write("Error: "+ error_message +"\n")
                 print(error_message)
 
-        return is_satisfied, is_error, error_message, error_action
+        return is_satisfied, is_error, error_message, error_action, states
 
     # pick ball room
     def pick(self, action):

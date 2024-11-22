@@ -96,12 +96,12 @@ class CookingSim(object):
 
 
     # Simulate given action sequence
-    def simulate_actions(self, action_sequence, test_log_file_path):
+    def simulate_actions(self, action_sequence, test_log_file_path, store_states = True):
 
         actions = re.findall(r'\(.*?\)', action_sequence)
         print(actions)
         num_actions = len(actions)
-
+        states = [self.pot_state.copy()]
         is_error = None
         is_satisfied = False
         error_action = None
@@ -151,7 +151,9 @@ class CookingSim(object):
                     f.write("Error: "+ error_message +"\n")
 
                 break
-
+            # store new state
+            if store_states == True:
+                states.append(self.pot_state.copy())
             # check if goal state is satisfied in the last action
             if i == num_actions - 1:
 
@@ -187,7 +189,7 @@ class CookingSim(object):
                         f.write("Error: "+ error_message +"\n")
                     print(error_message)
 
-        return is_satisfied, is_error, error_message, error_action
+        return is_satisfied, is_error, error_message, error_action, states
 
     # pick ingredient
     def pick(self, action):
@@ -265,7 +267,17 @@ class CookingSim(object):
             is_error = True
             error_message = "ingredient" + str(ingre_index) + " is not in hand. "
             return is_error, error_message
+        # check if igrdient and pot exist
+        if ingre_index > self.num_ingredients:
 
+            is_error = True
+            error_message = "ingredient" + str(ingre_index) + " does not exist. "
+            return is_error, error_message
+        if pot_index > self.num_pots:
+
+            is_error = True
+            error_message = "pot" + str(pot_index) + " does not exist. "
+            return is_error, error_message
         # if no error: execute the action
         self.pot_state[pot_index-1, ingre_index - 1] = 1
 
