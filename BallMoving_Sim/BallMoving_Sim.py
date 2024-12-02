@@ -238,7 +238,7 @@ class BallMovingSim(object):
                     f.write("Error: "+ error_message +"\n")
                 print(error_message)
 
-        return is_satisfied, is_error, error_message, error_action, states
+        return is_satisfied, is_error, error_message, error_action, states, actions
 
     # pick ball room
     def pick(self, action):

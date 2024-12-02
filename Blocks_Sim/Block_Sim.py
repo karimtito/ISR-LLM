@@ -120,9 +120,10 @@ class BlockSim(object):
 
 
     # Simulate given action sequence
-    def simulate_actions(self, action_sequence, test_log_file_path, store_states = True):
+    def simulate_actions(self, action_sequence, test_log_file_path, store_states = True, store_actions = True):
 
         actions = re.findall(r'\(.*?\)', action_sequence)
+
         print(f"Action plan: {actions}")
         num_actions = len(actions)
         states = [self.block_state.copy()]
@@ -130,6 +131,7 @@ class BlockSim(object):
         is_satisfied = False
         error_action = None
         error_message = ""
+        
 
         for i in range(num_actions):
 
@@ -237,7 +239,7 @@ class BlockSim(object):
                     f.write("Error: "+ error_message +"\n")
                 print(error_message)
         
-        return is_satisfied, is_error, error_message, error_action, states
+        return is_satisfied, is_error, error_message, error_action, states, actions
 
     # unstack b1 from b2
     def unstack(self, action):

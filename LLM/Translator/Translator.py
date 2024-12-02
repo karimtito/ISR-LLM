@@ -1,12 +1,13 @@
 import os
-
+from luna.utils.llama import LLaMATokenizer, LLaMAForCausalLM
 from transformers import LlamaTokenizer, LlamaForCausalLM, AutoTokenizer, AutoModelForCausalLM
 import torch
 
+luna_models= {  'tokenizer': LLaMATokenizer, 'model': LLaMAForCausalLM}
 hf_llama_models = { 'tokenizer': LlamaTokenizer, 'model': LlamaForCausalLM}
 hf_auto_models = { 'tokenizer': AutoTokenizer, 'model': AutoModelForCausalLM}
 
-backends = {'hf_llama': hf_llama_models, 'hf_auto': hf_auto_models}
+backends = {'luna': luna_models, 'hf_llama': hf_llama_models, 'hf_auto': hf_auto_models}
 
 class Translator(object):
     """
@@ -29,7 +30,7 @@ class Translator(object):
         self.device= device
         self.max_len = max_len
         self.output_hidden_states = output_hidden_states
-        self.output_attentions = output_attentions
+        self.output_attetions = output_attentions
         self.output_logits = output_logits
         #device ovverides device_map
         if device is not None:
@@ -38,11 +39,10 @@ class Translator(object):
         else:
             self.device_map = device_map
         self.backend = backends[backend_name]
-        print(f"Model: {self.model}")
+        print(f"self.model: {self.model}")
         self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
         self.llm = self.backend['model'].from_pretrained(self.model, low_cpu_mem_usage=True, torch_dtype=torch.float16, device_map=self.device_map,
-                                                         output_attentions=self.output_attentions,
-                                                          output_hidden_states=self.output_hidden_states)
+                                                          output_hidden_states=output_hidden_states)
         self.max_new_tokens = max_new_tokens
         # root for prompt examples
         if self.arg.domain == 'blocksworld':

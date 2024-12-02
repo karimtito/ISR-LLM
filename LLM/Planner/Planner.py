@@ -1,5 +1,5 @@
 import os
-from transformers import LlamaTokenizer, LlamaForCausalLM, AutoTokenizer, AutoModelForCausalLM
+from transformers import LlamaTokenizer, LlamaForCausalLM, AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 
 import torch
 
@@ -16,9 +16,9 @@ class Planner(object):
     is_log_example: if the few-shot examples are recorded in the log file
     temperature: default temperature value for LLM
     """
-    def __init__(self, arg, model, is_log_example = False, temperature = 0, device = None,max_len = 512, max_new_tokens = 100,
+    def __init__(self, arg, model, is_log_example = False, temperature = 0.0001, device = None,max_len = 512, max_new_tokens = 100,
                  backend_name = 'hf_auto', use_same_llm = False, llm=None, output_hidden_states = False, output_attentions = False, 
-                 output_logits = False, device_map = "auto"):
+                 output_logits = False, device_map = "auto",quant_8bit=False):
 
         self.arg = arg
         self.model =    model
@@ -34,17 +34,21 @@ class Planner(object):
         self.output_attentions = output_attentions
         self.output_logits = output_logits
         #device ovverides device_map
-        if device is not None:
-            self.device_map = device
-            self.device = device
-        else:
-            self.device_map = device_map
+        self.device = device
+        self.device_map = device_map
         
         self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
+        
         if not use_same_llm:
-            self.llm = self.backend['model'].from_pretrained(
-                self.model, low_cpu_mem_usage = True, torch_dtype = torch.float16, device_map = self.device_map,
-            )
+            if quant_8bit:
+                quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+                self.llm = self.backend['model'].from_pretrained(
+                    self.model, quantization_config=quantization_config , device_map = "auto",
+                )
+            else:
+                self.llm = self.backend['model'].from_pretrained(
+                    self.model, low_cpu_mem_usage = True, torch_dtype = torch.float16, device_map = self.device_map,
+                )
         elif llm is not None:
             self.llm = llm
         else:
@@ -124,37 +128,48 @@ class Planner(object):
                 if self.is_log_example == True and is_reinitialize == False:
                     self.write_content(content= answer, is_append=True)
         
-        if "mistral" in self.model:
+        if "mistral" or "gemma" in self.model:
             # for mistral model, only one system call is allowed, those all previous messages must be merged into one
             total_sys_content = self.messages[0]["content"] + '\n'
             for message in self.messages[1:]:
             
                 if message["name"] == "example_user":
-                    total_sys_content += "Example question:" + '\n' + message["content"] + "\n"
+                    total_sys_content += "Example of prompt:" + message["content"] + "\n"
                 elif message["name"] == "example_assistant":
-                    total_sys_content += "Example answer:" + "\n" + message["content"] + "\n"
-                
-            self.messages = [{"role": "system", "content": total_sys_content}]
+                    total_sys_content += "Example of expected answer:" + message["content"] + "\n"
+            if "mistral" in self.model:
+                self.messages = [{"role": "system", "content": total_sys_content}]
+            else:
+                self.messages = [{"role": "user", "content": total_sys_content}]
+        
 
                         
 
     # Query question message
-    def query(self, content, is_append = False, temperature = 0.0):
+    def query(self, content, is_append = False, temperature = 0.1):
 
         # add new question to message list
-        question_message = {"role": "user", "content": content}
-        if is_append == False:
-            question = self.messages.copy()
+        if len(self.messages) == 1 and "gemma"in self.model:
+            openning_content = self.messages[0]["content"]
+            question_message = {"role": "user", "content": openning_content + "\n" + content}
+            self.messages = [question_message]
+            if is_append == False:
+                question = self.messages.copy()
+            else:
+                question = self.messages
+                
+
         else:
-            question = self.messages
-        question.append(question_message)
- 
-        self.write_content(content= content, is_append=True)
-
+            question_message = {"role": "user", "content": content}
+            if is_append == False:
+                question = self.messages.copy()
+            else:
+                question = self.messages
+                question.append(question_message)
     
-
+        self.write_content(content= content, is_append=True)
         pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
-        inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=3000).to(self.device)
+        inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=self.max_len).to(self.device)
         del pre_tokens
         #print(f"current device: {self.device}")
         outputs = self.llm.generate(
@@ -167,7 +182,9 @@ class Planner(object):
         return_dict_in_generate = True,
         pad_token_id = self.tokenizer.eos_token_id,
         attention_mask = inputs.attention_mask,
-        
+        do_sample = False, 
+        temperature = 0,
+    
         
         
         )
