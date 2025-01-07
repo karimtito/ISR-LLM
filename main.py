@@ -326,7 +326,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
             #print(f"Response: \n {action_sequence}") 
             # simulate actions
             print("Attempt", j)
-            print(action_sequence)
+            print(f"Action sequence: \n {action_sequence}")
             with open(test_log_file_path, "a") as f:
                 f.write(action_sequence +"\n")
                 f.write("Analysis: " +"\n")
@@ -533,6 +533,7 @@ if __name__=="__main__":
     parser.add_argument('--num_valid_example', type=int, choices=[4,5,6], default=6)
     parser.add_argument('--use_same_llm', action='store_true',default=True)
     parser.add_argument('--print_states', action='store_true',default=False)
+    parser.add_argument('--debug', action='store_true',default=False)
 
 
     args = parser.parse_args()
@@ -558,10 +559,10 @@ if __name__=="__main__":
     # Initialize planner
     if args.use_same_llm:
         LLM_Planner = Planner(args, model=args.model, is_log_example=True, llm=LLM_Translator.llm, use_same_llm=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens,
-                              device = args.device)
+                              device = args.device, debug = args.debug)
     else:
         LLM_Planner = Planner(args, model=args.model,  is_log_example=True, max_len=args.max_len, backend_name=args.backend, max_new_tokens=args.max_new_tokens,
-                              device = args.device)
+                              device = args.device, debug = args.debug)
 
     # Initialize validator 
     if args.method == "LLM_trans_self_feedback" or args.method == "LLM_no_trans_self_feedback":

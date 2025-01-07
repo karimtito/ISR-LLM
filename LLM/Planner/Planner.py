@@ -18,7 +18,7 @@ class Planner(object):
     """
     def __init__(self, arg, model, is_log_example = False, temperature = 0.0001, device = None,max_len = 512, max_new_tokens = 100,
                  backend_name = 'hf_auto', use_same_llm = False, llm=None, output_hidden_states = False, output_attentions = False, 
-                 output_logits = False, device_map = "auto",quant_8bit=False):
+                 output_logits = False, device_map = "auto", quant_8bit=False, debug=False):
 
         self.arg = arg
         self.model =    model
@@ -36,18 +36,18 @@ class Planner(object):
         #device ovverides device_map
         self.device = device
         self.device_map = device_map
-        
+        self.temperature = temperature
         self.tokenizer = self.backend['tokenizer'].from_pretrained(self.model)
         
         if not use_same_llm:
             if quant_8bit:
                 quantization_config = BitsAndBytesConfig(load_in_8bit=True)
                 self.llm = self.backend['model'].from_pretrained(
-                    self.model, quantization_config=quantization_config , device_map = "auto",
+                    self.model, quantization_config=quantization_config , device_map =self.device_map,
                 )
             else:
                 self.llm = self.backend['model'].from_pretrained(
-                    self.model, low_cpu_mem_usage = True, torch_dtype = torch.float16, device_map = self.device_map,
+                    self.model, torch_dtype = torch.float16, device_map = self.device_map,
                 )
         elif llm is not None:
             self.llm = llm
@@ -147,7 +147,8 @@ class Planner(object):
 
     # Query question message
     def query(self, content, is_append = False, temperature = 0.1):
-
+        print(f"self.device: {self.device}")
+        print(f"self.device_map: {self.device_map}")
         # add new question to message list
         if len(self.messages) == 1 and "gemma"in self.model:
             openning_content = self.messages[0]["content"]
@@ -172,6 +173,10 @@ class Planner(object):
         inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=self.max_len).to(self.device)
         del pre_tokens
         #print(f"current device: {self.device}")
+        if self.temperature is not None and self.temperature>0:
+            do_sample = True
+        else:
+            do_sample = False
         outputs = self.llm.generate(
         inputs.input_ids,
         top_k = 128,
@@ -182,12 +187,8 @@ class Planner(object):
         return_dict_in_generate = True,
         pad_token_id = self.tokenizer.eos_token_id,
         attention_mask = inputs.attention_mask,
-        do_sample = False, 
-        temperature = 0,
-    
-        
-        
-        )
+        do_sample = do_sample, 
+        temperature = self.temperature,)
         len_question_tokens = len(inputs[0])
         generated_tokens = outputs.sequences[0][len_question_tokens:]
         generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)

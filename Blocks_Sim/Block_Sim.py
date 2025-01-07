@@ -122,8 +122,15 @@ class BlockSim(object):
     # Simulate given action sequence
     def simulate_actions(self, action_sequence, test_log_file_path, store_states = True, store_actions = True):
 
-        actions = re.findall(r'\(.*?\)', action_sequence)
-
+        #actions = re.findall(r'\(.*?\)', action_sequence)
+        #get actions from the action sequence and their corresponding indices in the action sequence string
+        actions_iter = re.finditer(r'\(.*?\)', action_sequence) 
+        actions = []    
+        action_spans = []
+        for action in actions_iter:
+            actions.append(action.group())
+            action_spans.append(action.span())
+       
         print(f"Action plan: {actions}")
         num_actions = len(actions)
         states = [self.block_state.copy()]
