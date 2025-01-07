@@ -30,7 +30,7 @@ class Translator(object):
         self.device= device
         self.max_len = max_len
         self.output_hidden_states = output_hidden_states
-        self.output_attetions = output_attentions
+        self.output_attentions = output_attentions
         self.output_logits = output_logits
         #device ovverides device_map
         if device is not None:
