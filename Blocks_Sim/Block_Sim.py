@@ -337,7 +337,11 @@ class BlockSim(object):
         #extract the block indices
         b1_index = int(obj1[1])
         b2_index = int(obj2[1])
-        
+        # b1 = b2 : can't stack a block on itself
+        if b1_index == b2_index:
+            is_error = True 
+            error_message = f"Block b{b1_index} cannot be stacked on itself."
+            return is_error, error_message
         if b1_index not in range(1, self.num_blocks+1):
             is_error = True
             error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
@@ -366,10 +370,10 @@ class BlockSim(object):
             is_error = True
             error_message = "b" + str(b1_index) + " is not in hand. "
             return is_error, error_message
-
+        
         # b2 is clear
         if self.clear_state[b2_index-1] != 1:
-
+        
             is_error = True
             block_on_b2 = np.where(self.block_state==b2_index)[0][0] + 1
             error_message = "b" + str(b2_index) + " is not clear to move. b" + str(block_on_b2) + " is on top of it. Please add unstack b" + str(block_on_b2) + " from b" + str(b2_index) + " before this action. "
