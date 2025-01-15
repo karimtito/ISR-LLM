@@ -14,20 +14,22 @@ from BallMoving_Sim.BallMoving_Sim import BallMovingSim
 from Cooking_Sim.Cooking_Sim import CookingSim
 
 DOMAINS = ["blocksworld", "ballmoving", "cooking"]
-METHODS = ["LLM_trans_self_feedback", "LLM_trans_no_feedback", "LLM_trans_exact_feedback", "LLM_no_trans", "LLM_no_trans_self_feedback"]
+METHODS = ["LLM_trans_self_feedback", "LLM_trans_no_feedback", "LLM_trans_exact_feedback", "LLM_no_trans", "LLM_no_trans_simp", "LLM_no_trans_self_feedback"]
 MODELS = ["meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-3.2-3B-Instruct","mistralai/Mistral-Nemo-Instruct-2407",""]
-MODEL_NAMES = ["llama_8B", "llama_3B", "mistral_nemo", "gemma_9B", "gemma_27B", "gemma_7B"]
+MODEL_NAMES = ["llama_8B", "llama_3B", "mistral_nemo", "gemma_9B", "gemma_27B", "gemma_7B", "qwen_14B", "qwen_7B"]
 model_dict= {"llama_8B": "meta-llama/Llama-3.1-8B-Instruct",
+             "meta_8B": "meta-llama/Llama-3.1-8B-Instruct",
               "llama_3B": "meta-llama/Llama-3.2-3B-Instruct", 
               "mistral_nemo": "mistralai/Mistral-Nemo-Instruct-2407",
               "gemma_9B": "google/gemma-2-9b-it",
               "gemma_27B": "google/gemma-2-27b-it",
               "gemma_7B": "google/gemma-7b-it",
+              "qwen_14B": "Qwen/Qwen2.5-14B-Instruct",
               "qwen_7B": "Qwen/Qwen2.5-7B-Instruct"}
 # LLM planning without PDDL translator
 def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine,
-                                  max_refine_temperature, num_prompt_examples_dataset, 
-                                  test_log_file_path, gpt_api_wait_time, print_states = False):
+                                  max_refine_temperature, num_prompt_examples_dataset,
+                                  test_log_file_path, gpt_api_wait_time, print_states = False, simple = False,):
     nb_tot_attempt = 0
     nb_total_errors = 0
     nb_success = 0
@@ -69,7 +71,7 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
             # LLM planner
             # increase temperature if more attempts
             if i == 0: 
-                temperature = 0
+                temperature = 0.0001
             else:
                 temperature = min(max_refine_temperature, 0.1*i)
             response_planner = LLM_Planner.query(planning_problem, is_append = True, temperature = temperature)
@@ -520,9 +522,9 @@ if __name__=="__main__":
     parser.add_argument('--domain', type=str, choices=DOMAINS, default="blocksworld")
     parser.add_argument('--method', type=str, choices=METHODS, default="LLM_trans_exact_feedback")
     parser.add_argument('--model', type=str, choices=MODELS, default="")
-    parser.add_argument('--model_name', type=str, choices=MODEL_NAMES, default="llma_8B")
-    parser.add_argument('--max_len', type=int, default=4096)
-    parser.add_argument('--temperature', type=float, default=0.0)
+    parser.add_argument('--model_name', type=str, choices=MODEL_NAMES, default="meta_8B")
+    parser.add_argument('--max_len', type=int, default=8000)
+    parser.add_argument('--temperature', type=float, default=0.0001)
     parser.add_argument('--max_new_tokens', type=int, default=1024)
     parser.add_argument('--backend', type=str, default="hf_auto")
     parser.add_argument('--device', type=str, default="cuda:0")
@@ -534,6 +536,8 @@ if __name__=="__main__":
     parser.add_argument('--use_same_llm', action='store_true',default=True)
     parser.add_argument('--print_states', action='store_true',default=False)
     parser.add_argument('--debug', action='store_true',default=False)
+    parser.add_argument('--num_test', type=int, default = 10)
+    parser.add_argument('--gpt_api_wait_time', type=float, default=0.01)
 
 
     args = parser.parse_args()
@@ -587,7 +591,7 @@ if __name__=="__main__":
     test_initial_state, test_goal_state = load_test_scenarios(args)
 
     # run test
-    num_test = 10
+    num_test = args.num_test
     num_prompt_examples_dataset = 3 # the first n examples are in the prompt example, so skip them
     max_num_refine = 10  # max number of refinement, if it is 0 -> no feedback
     gpt_api_wait_time = args.gpt_api_wait_time
@@ -627,13 +631,18 @@ if __name__=="__main__":
         test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_refine, 
                                 max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time, print_states = args.print_states)
 
+    elif args.method == "LLM_no_trans_simp":
+        
+        max_num_refine = 10
+        test_LLM_no_trans
+    
     elif args.method == "LLM_no_trans_self_feedback":
 
         test_LLM_no_trans_self_feedback(args.domain, test_initial_state, test_goal_state, num_test, max_num_refine, 
                                 max_refine_temperature, num_prompt_examples_dataset, test_log_file_path, gpt_api_wait_time)
 
     else:
-
+        
         raise ValueError("Method not implemented.")
 
 
