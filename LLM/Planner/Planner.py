@@ -59,26 +59,16 @@ class Planner(object):
         # root for prompt examples
         if self.arg.domain == 'blocksworld':
             self.max_examples = 5
-            self.num_plan_example = min(arg.num_plan_example, self.max_examples)
-            if arg.method == "LLM_no_trans" or arg.method == "LLM_no_trans_self_feedback":
-                self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "blocksworld_no_trans_examples")
-            else:
-                self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "blocksworld_examples")
-        elif self.arg.domain == 'ballmoving':
+        else:
             self.max_examples = 3
-            self.num_plan_example = min(arg.num_plan_example, self.max_examples)
-            if arg.method == "LLM_no_trans" or arg.method == "LLM_no_trans_self_feedback":
-                self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ballmoving_no_trans_examples")
-            else:
-                self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ballmoving_examples")
-        elif self.arg.domain == 'cooking':
-            self.max_examples = 3
-            self.num_plan_example = min(arg.num_plan_example, self.max_examples)
-            if arg.method == "LLM_no_trans" or arg.method == "LLM_no_trans_self_feedback":
-                self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cooking_no_trans_examples")
-            else:
-                self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cooking_examples")
-
+        self.num_plan_example = min(arg.num_plan_example, self.max_examples)
+        if arg.method == "LLM_no_trans" or arg.method == "LLM_no_trans_self_feedback":
+            self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{arg.domain}_no_trans_examples")
+        elif arg.method == "LLM_no_trans_simp":
+            self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{arg.domain}_no_trans_simp_examples")
+        else:
+            self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{arg.domain}_examples")
+       
         # initialize messages
         self.init_messages()
 
