@@ -181,13 +181,22 @@ class Planner(object):
         temperature = self.temperature,)
         len_question_tokens = len(inputs[0])
         generated_tokens = outputs.sequences[0][len_question_tokens:]
-        generated_text = self.tokenizer.decode(generated_tokens,skip_special_tokens=True)
+        decoded_tokens = self.tokenizer.batch_decode(generated_tokens,skip_special_tokens=True)
+    
+        # patch decoded tokens together into one string
+        generated_text = ''.join(decoded_tokens)
+    
+    
         self.messages.append({"role": "assistant", "content": generated_text})
         self.write_content(content= generated_text, is_append=True)
-        response= {'content':generated_text,'response_tokens':generated_tokens,"input_tokens":inputs.input_ids[0]}
+        
+        response= {'content':generated_text,'response_tokens':generated_tokens, "decoded_tokens":decoded_tokens, 
+                   "input_tokens":inputs.input_ids[0]}
         if self.output_hidden_states:
             response['hidden_states'] = outputs.hidden_states
         if self.output_attentions:
             response['attentions'] = outputs.attentions
+        if self.output_logits:
+            response['logits'] = outputs.logits
 
         return response

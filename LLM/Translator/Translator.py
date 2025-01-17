@@ -28,7 +28,7 @@ class Translator(object):
         self.log_file_path = self.log_dir + "/translator_log.txt"
         self.is_log_example = is_log_example
         self.device= device
-        self.max_len = max_len
+       
         self.output_hidden_states = output_hidden_states
         self.output_attentions = output_attentions
         self.output_logits = output_logits
