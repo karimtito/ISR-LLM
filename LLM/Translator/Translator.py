@@ -45,19 +45,11 @@ class Translator(object):
                                                           output_hidden_states=output_hidden_states)
         self.max_new_tokens = max_new_tokens
         # root for prompt examples
-        if self.arg.domain == 'blocksworld':
-            self.max_examples = 3
-            self.num_trans_example = min(arg.num_trans_example, self.max_examples)
-            self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "blocksworld_examples")
-        elif self.arg.domain == 'ballmoving':
-            self.max_examples = 3
-            self.num_trans_example = min(arg.num_trans_example, self.max_examples)
-            self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ballmoving_examples")
-        elif self.arg.domain == 'cooking':
-            self.max_examples = 3
-            self.num_trans_example = min(arg.num_trans_example, self.max_examples)
-            self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cooking_examples")
         
+        self.max_examples = 3
+        self.num_trans_example = min(arg.num_trans_example, self.max_examples)
+        self.prompt_example_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{arg.domain}_examples")
+    
         # initialize messages
         self.init_messages()
 
