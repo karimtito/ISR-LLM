@@ -90,7 +90,7 @@ def test_LLM_no_trans(test_initial_state, test_goal_state, num_test, max_num_ref
                 f.write("Analysis: " +"\n")
 
             # validation using external simulation
-            is_satisfied, is_error, error_message, error_action, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+            is_satisfied, is_error, error_message, error_action, error_type, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
             if print_states:
                 for i in range(len(states)):
                     print(f"State {i}: {states[i]}")
@@ -258,7 +258,7 @@ def test_LLM_no_trans_self_feedback(domain, test_initial_state, test_goal_state,
         print("Actual analysis:")
         with open(test_log_file_path, "a") as f:
             f.write("Actual analysis:\n")
-        is_satisfied, is_error, error_message, error_action, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+        is_satisfied, is_error, error_message, error_action, error_type, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
 
         # reinitialize planner for next case
         LLM_Planner.init_messages(is_reinitialize = True)
@@ -334,7 +334,7 @@ def test_LLM_trans_exact_feedback(test_initial_state, test_goal_state, num_test,
                 f.write("Analysis: " +"\n")
 
             # validation using external simulation
-            is_satisfied, is_error, error_message, error_action, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+            is_satisfied, is_error, error_message, error_action, error_type, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
 
             # if error is found
             if is_error == True:
@@ -506,7 +506,7 @@ def test_LLM_trans_self_feedback(domain, test_initial_state, test_goal_state, nu
         print("Actual analysis:")
         with open(test_log_file_path, "a") as f:
             f.write("Actual analysis:\n")
-        is_satisfied, is_error, error_message, error_action, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
+        is_satisfied, is_error, error_message, error_action, error_type, states, actions = scenario_simulator.simulate_actions(action_sequence, test_log_file_path)
 
         # reinitialize planner for next case
         LLM_Planner.init_messages(is_reinitialize = True)

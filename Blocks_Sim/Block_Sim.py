@@ -138,6 +138,7 @@ class BlockSim(object):
         is_satisfied = False
         error_action = None
         error_message = ""
+        error_type = ""
         
 
         for i in range(num_actions):
@@ -160,19 +161,19 @@ class BlockSim(object):
             # execute actions
             if action_type == "unstack":
 
-                is_error, error_message = self.unstack(current_action)
+                is_error, error_message, error_type = self.unstack(current_action)
 
             elif action_type == "stack":
 
-                is_error, error_message = self.stack(current_action)
+                is_error, error_message, error_type = self.stack(current_action)
 
             elif action_type == "putdown":
 
-                is_error, error_message = self.putdown(current_action)
+                is_error, error_message, error_type = self.putdown(current_action)
 
             elif action_type == "pickup":
 
-                is_error, error_message = self.pickup(current_action)
+                is_error, error_message, error_type = self.pickup(current_action)
 
             else:
 
@@ -246,13 +247,14 @@ class BlockSim(object):
                     f.write("Error: "+ error_message +"\n")
                 print(error_message)
         
-        return is_satisfied, is_error, error_message, error_action, states, actions
+        return is_satisfied, is_error, error_message, error_action, error_type, states, actions
 
     # unstack b1 from b2
     def unstack(self, action):
 
         is_error = False
         error_message = None
+        error_type = "block"
         obj1 = action[1].strip('()')
         obj2 = action[2].strip('()')
         print(f"action: {action}")
@@ -260,53 +262,62 @@ class BlockSim(object):
         
         if obj1[0] != 'b' or not obj1[1:].isdigit():
             is_error = True
+            error_type = "format"
             error_message = f"First object {obj1} in action is not of the form bX where X is a number. Please replace it by a valid block."
-            return is_error, error_message
+            return is_error, error_message, error_type
         #check if action second object is of the form bX where X is a number
         if obj2[0] != 'b' or not obj2[1:].isdigit():
             is_error = True
+            error_type = "format"
             error_message = f"Second object {obj2} in action is not of the form bX where X is a number. Please replace it by a valid block."
-            return is_error, error_message
+            return is_error, error_message, error_type
         b1_index = int(obj1[1])
         b2_index = int(obj2[1])
         
         if b1_index not in range(1, self.num_blocks+1):
             is_error = True
+            error_type = "index"
             error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         if b2_index not in range(1, self.num_blocks+1):
             is_error = True
+            error_type = "index"
             error_message = f"Block b{b2_index} is not a valid block as index {b2_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         # check if pre-conditions are satisfied
         # hand is empty
         if self.is_hand_empty == False:
 
             is_error = True
+            error_type = "hand"
             block_in_hand = np.where(self.block_state==-1)[0][0] + 1
             error_message = "Hand is not empty when unstacking. Please add putdown b" + str(block_in_hand) + " before this action. "
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         # b1 is clear
         if self.clear_state[b1_index-1] != 1:
 
             is_error = True
+            error_type = "clear"
             block_on_b1 = np.where(self.block_state==b1_index)[0][0] + 1
             error_message = "b" + str(b1_index) + " is not clear to move. b" + str(block_on_b1) + " is on top of it. Please add unstack b" + str(block_on_b1) + " from b" + str(b1_index) + " before this action. "
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         # (on b1 b2)
         block_under_b1 = self.block_state[b1_index-1]
         if block_under_b1 != b2_index:
 
             is_error = True
+            
             if block_under_b1 == 0:
+                error_type = "table"
                 error_message = "b" + str(b1_index) + " is on the table. Please replace (unstack b" +str(b1_index)  +  " b" + str(b2_index) + ") with (pickup b" + str(b1_index) + "). " 
             else:
                 error_message = "b" + str(b1_index) + " is not on top of b" + str(b2_index) + ". "
-            return is_error, error_message
+                error_type = "block"
+            return is_error, error_message, error_type
 
 
         # if no error: execute the action
@@ -314,7 +325,7 @@ class BlockSim(object):
         self.clear_state = self.determine_clear_state(self.block_state)
         self.is_hand_empty = False 
 
-        return is_error, error_message
+        return is_error, error_message, error_type
 
     # stack b1 on b2
     def stack(self, action):
@@ -323,16 +334,20 @@ class BlockSim(object):
         obj1 = action[1].strip('()')
         obj2 = action[2].strip('()')
         error_message = None
+        error_type = None
+
          #check if action first object is of the form bX where X is a number
         if obj1[0] != 'b' or not obj1[1:].isdigit():
             is_error = True
             error_message = f"First object {obj1} in action is not of the form bX where X is a number. Please replace it by a valid block."
-            return is_error, error_message
+            error_type = "format"
+            return is_error, error_message, error_type
         #check if action second object is of the form bX where X is a number
         if obj2[0] != 'b' or not obj2[1:].isdigit():
             is_error = True
             error_message = f"Second object {obj2} in action is not of the form bX where X is a number. Please replace it by a valid block."
-            return is_error, error_message
+            error_type = "format"
+            return is_error, error_message, error_type
         
         #extract the block indices
         b1_index = int(obj1[1])
@@ -341,16 +356,19 @@ class BlockSim(object):
         if b1_index == b2_index:
             is_error = True 
             error_message = f"Block b{b1_index} cannot be stacked on itself."
-            return is_error, error_message
+            error_type = "block"
+            return is_error, error_message, error_type
         if b1_index not in range(1, self.num_blocks+1):
             is_error = True
+            error_type = "index"
             error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         if b2_index not in range(1, self.num_blocks+1):
             is_error = True
+            error_type = "index"
             error_message = f"Block b{b2_index} is not a valid block as index {b2_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
-            return is_error, error_message
+            return is_error, error_message, error_type
     
 
         # check if pre-conditions are satisfied
@@ -359,17 +377,21 @@ class BlockSim(object):
 
             is_error = True
             if self.block_state[b1_index-1] == 0:
+                
                 error_message = "Hand is empty when stacking b" + str(b1_index) + ". Please add pickup b" + str(b1_index) + " before this action. " 
+                error_type = "hand"
             else:
                 error_message = "Hand is empty when stacking b" + str(b1_index) + ". Please add unstack b" + str(b1_index) + " b" + str(self.block_state[b1_index-1]) + " before this action. " 
-            return is_error, error_message
+                error_type = "hand"
+            return is_error, error_message, error_type
 
         # b1 is in hand
         if self.block_state[b1_index-1] != -1:
 
             is_error = True
             error_message = "b" + str(b1_index) + " is not in hand. "
-            return is_error, error_message
+            error_type = "hand"
+            return is_error, error_message, error_type
         
         # b2 is clear
         if self.clear_state[b2_index-1] != 1:
@@ -377,21 +399,22 @@ class BlockSim(object):
             is_error = True
             block_on_b2 = np.where(self.block_state==b2_index)[0][0] + 1
             error_message = "b" + str(b2_index) + " is not clear to move. b" + str(block_on_b2) + " is on top of it. Please add unstack b" + str(block_on_b2) + " from b" + str(b2_index) + " before this action. "
-            return is_error, error_message
+            error_type = "clear"
+            return is_error, error_message, error_type
 
         # if no error: execute the action
         self.block_state[b1_index - 1] = b2_index # on table
         self.clear_state = self.determine_clear_state(self.block_state)
         self.is_hand_empty = True 
 
-        return is_error, error_message
+        return is_error, error_message, error_type
 
     # putdown b1
     def putdown(self, action):
 
         is_error = False
         error_message = None
-
+        error_type = None
         b1_index = int(action[1][1])
 
         # check if pre-conditions are satisfied
@@ -400,27 +423,30 @@ class BlockSim(object):
 
             is_error = True
             error_message = "Hand is empty when putting down b" + str(b1_index) + ". "
-            return is_error, error_message
+            error_type = "hand"
+            return is_error, error_message, error_type
 
         # b1 is in hand
         if self.block_state[b1_index-1] != -1:
 
             is_error = True
             error_message = "b" + str(b1_index) + " is not in hand. "
-            return is_error, error_message
+            error_type = "hand"
+            return is_error, error_message, error_type
 
         # if no error: execute the action
         self.block_state[b1_index - 1] = 0 # on table
         self.clear_state = self.determine_clear_state(self.block_state)
         self.is_hand_empty = True 
 
-        return is_error, error_message
+        return is_error, error_message, error_type
 
     # pickup b1 from table
     def pickup(self, action):
 
         is_error = False
         error_message = None
+        error_type = None
 
         b1_index = int(action[1][1])
 
@@ -431,7 +457,8 @@ class BlockSim(object):
             is_error = True
             block_in_hand = np.where(self.block_state==-1)[0][0] + 1
             error_message = "Hand is not empty when picking up. Please add putdown b" + str(block_in_hand) + " before this action. "
-            return is_error, error_message
+            error_type = "hand"
+            return is_error, error_message, error_type
 
         # b1 is clear
         if self.clear_state[b1_index-1] != 1:
@@ -439,14 +466,16 @@ class BlockSim(object):
             is_error = True
             block_on_b1 = np.where(self.block_state==b1_index)[0][0] + 1
             error_message = "b" + str(b1_index) + " is not clear to move. b" + str(block_on_b1) + " is on top of it. Please add unstack b" + str(block_on_b1) + " from b" + str(b1_index) + " before this action. "
-            return is_error, error_message
+            error_type = "clear"
+            return is_error, error_message, error_type
 
         # b1 is on table
         if self.block_state[b1_index-1] != 0:
 
             is_error = True
             error_message = "b" + str(b1_index) + " is on top of b" + str(self.block_state[b1_index-1]) + ". Please replace (pickup b" +str(b1_index)  + ") with (unstack b" + str(b1_index) + " b" + str(self.block_state[b1_index-1]) + "). "
-            return is_error, error_message
+            error_type = "block"
+            return is_error, error_message, error_type
 
 
         # if no error: execute the action
@@ -454,7 +483,7 @@ class BlockSim(object):
         self.clear_state = self.determine_clear_state(self.block_state)
         self.is_hand_empty = False 
 
-        return is_error, error_message        
+        return is_error, error_message, error_type        
 
     # transform goal state to the same representation of block state for comparision
     def transform_goal_state(self, goal_state):

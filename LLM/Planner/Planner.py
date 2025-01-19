@@ -136,10 +136,10 @@ class Planner(object):
                         
 
     # Query question message
-    def query(self, content, is_append = False, temperature = 0.1):
-        print(f"self.device: {self.device}")
-        print(f"self.device_map: {self.device_map}")
+    def query(self, content, is_append = False, temperature = 0.1, debug=False):
         # add new question to message list
+        if debug:
+            print("content: ", content)
         if len(self.messages) == 1 and "gemma"in self.model:
             openning_content = self.messages[0]["content"]
             question_message = {"role": "user", "content": openning_content + "\n" + content}
@@ -162,7 +162,7 @@ class Planner(object):
         pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
         inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=self.max_len).to(self.device)
         del pre_tokens
-        #print(f"current device: {self.device}")
+        
         if self.temperature is not None and self.temperature>0:
             do_sample = True
         else:

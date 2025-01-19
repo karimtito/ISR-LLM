@@ -113,7 +113,7 @@ class Translator(object):
     
 
         pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
-        inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=2500).to(self.device)
+        inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=2800).to(self.device)
         del pre_tokens
         outputs = self.llm.generate(
         inputs.input_ids,

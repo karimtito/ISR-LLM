@@ -106,6 +106,7 @@ class CookingSim(object):
         is_satisfied = False
         error_action = None
         error_message = ""
+        error_type = ""
 
         for i in range(num_actions):
 
@@ -125,15 +126,15 @@ class CookingSim(object):
             # execute actions
             if action_type == "pick":
 
-                is_error, error_message = self.pick(current_action)
+                is_error, error_message , error_type = self.pick(current_action)
 
             elif action_type == "putdown":
 
-                is_error, error_message = self.putdown(current_action)
+                is_error, error_message, error_type = self.putdown(current_action)
 
             elif action_type == "add":
 
-                is_error, error_message = self.add(current_action)
+                is_error, error_message, error_type = self.add(current_action)
 
             else:
 
@@ -179,8 +180,10 @@ class CookingSim(object):
                             if pot != goal:
 
                                 if pot == 1:
+                                    error_type = "extra"
                                     error_message = "Goal is not satisfied. pot" + str(j+1) + " should not contain ingredient" + str(k+1) + ". "
                                 elif pot == 0:
+                                    error_type = "missing"
                                     error_message = "Goal is not satisfied. pot" + str(j+1) + " should contain ingredient" + str(k+1) + ". "
 
                                 break
@@ -189,14 +192,14 @@ class CookingSim(object):
                         f.write("Error: "+ error_message +"\n")
                     print(error_message)
 
-        return is_satisfied, is_error, error_message, error_action, states, actions
+        return is_satisfied, is_error, error_message, error_action, error_type, states, actions
 
     # pick ingredient
     def pick(self, action):
 
         is_error = False
         error_message = None
-
+        error_type = None
         ingre_index = int(action[1][10])
 
         # check if pre-conditions are satisfied
@@ -205,28 +208,31 @@ class CookingSim(object):
 
             is_error = True
             ingre_in_hand = self.ingredient_in_hand
+            error_type = "hand"
             error_message = "Hand is not empty when picking. Please first putdown ingredient" + str(ingre_in_hand) + " before this action. "
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         # ingredient has not been picked yet
         if self.ingredient_picked_state[ingre_index-1] != 0:
 
             is_error = True
+            error_type = "picked"
             error_message = "ingredient" + str(ingre_index) + " has already been picked. "
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         # if no error: execute the action
         self.is_hand_empty = False 
         self.ingredient_in_hand = ingre_index
         self.ingredient_picked_state[ingre_index-1] = 1
 
-        return is_error, error_message
+        return is_error, error_message, error_type
 
     # putdown ingredient
     def putdown(self, action):
 
         is_error = False
         error_message = None
+        error_type = None
 
         ingre_index = int(action[1][10])
 
@@ -236,20 +242,21 @@ class CookingSim(object):
 
             is_error = True
             error_message = "Hand is empty when putting down ingredient" + str(ingre_index) + ". "
-            return is_error, error_message
+            error_type = "hand"
+            return is_error, error_message, error_type
 
         # if no error: execute the action
         self.is_hand_empty = True 
         self.ingredient_in_hand = None
 
-        return is_error, error_message
+        return is_error, error_message, error_type
 
     # add ingredient to pot
     def add(self, action):
 
         is_error = False
         error_message = None
-
+        error_type = None
         ingre_index = int(action[1][10])
         pot_index = int(action[2][3])
 
@@ -258,27 +265,31 @@ class CookingSim(object):
         if self.is_hand_empty == True:
 
             is_error = True
+            error_type = "hand"
             error_message = "Hand is empty when adding ingredient" + str(ingre_index) + ". "
-            return is_error, error_message
+            return is_error, error_message, error_type
 
         # correct ingredient is in hand
         if self.ingredient_in_hand != ingre_index:
 
             is_error = True
             error_message = "ingredient" + str(ingre_index) + " is not in hand. "
-            return is_error, error_message
+            error_type = "hand"
+            return is_error, error_message, error_type
         # check if igrdient and pot exist
         if ingre_index > self.num_ingredients:
 
             is_error = True
+            error_type = "ingredient"
             error_message = "ingredient" + str(ingre_index) + " does not exist. "
-            return is_error, error_message
+            return is_error, error_message, error_type
         if pot_index > self.num_pots:
 
             is_error = True
+            error_type = "pot"
             error_message = "pot" + str(pot_index) + " does not exist. "
-            return is_error, error_message
+            return is_error, error_message, error_type
         # if no error: execute the action
         self.pot_state[pot_index-1, ingre_index - 1] = 1
 
-        return is_error, error_message        
+        return is_error, error_message , error_type      
