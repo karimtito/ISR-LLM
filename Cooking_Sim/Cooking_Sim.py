@@ -102,11 +102,12 @@ class CookingSim(object):
         print(actions)
         num_actions = len(actions)
         states = [self.pot_state.copy()]
-        is_error = None
+        is_error, error_action_idx = None, -1
         is_satisfied = False
         error_action = None
         error_message = ""
         error_type = ""
+        error_action_idx = -1
 
         for i in range(num_actions):
 
@@ -138,14 +139,14 @@ class CookingSim(object):
 
             else:
 
-                print("Action", action_type, "is not defined.")
+                is_error, error_message, error_type = True, "Action "+ action_type + " is not defined.", "undefined action"
                 continue
                 #raise ValueError("Action", action_type, "is not defined.")
 
             # if there is error
             if is_error == True:
 
-                error_action = actions[i]
+                error_action,error_action_idx = actions[i],i
 
                 print("Error:", error_message)
                 with open(test_log_file_path, "a") as f:
@@ -192,7 +193,7 @@ class CookingSim(object):
                         f.write("Error: "+ error_message +"\n")
                     print(error_message)
 
-        return is_satisfied, is_error, error_message, error_action, error_type, states, actions
+        return is_satisfied, is_error, error_message, error_action, error_type, error_action_idx, states, actions
 
     # pick ingredient
     def pick(self, action):
@@ -200,6 +201,11 @@ class CookingSim(object):
         is_error = False
         error_message = None
         error_type = None
+        if len(action)!=2:
+            is_error = True
+            error_message = f"action '{action[0]}' requires 1 argument but only was given {len(action)-1} parameter(s)."
+            error_type = "missing argument"
+            return is_error, error_message, error_type
         ingre_index = int(action[1][10])
 
         # check if pre-conditions are satisfied
@@ -233,7 +239,11 @@ class CookingSim(object):
         is_error = False
         error_message = None
         error_type = None
-
+        if len(action)!=2:
+            is_error = True
+            error_message = f"action '{action[0]}' requires 1 argument but was given {len(action)-1} parameter(s)."
+            error_type = "missing argument"
+            return is_error, error_message, error_type
         ingre_index = int(action[1][10])
 
         # check if pre-conditions are satisfied
@@ -257,6 +267,11 @@ class CookingSim(object):
         is_error = False
         error_message = None
         error_type = None
+        if len(action)!=3:
+            is_error = True
+            error_message = f"action '{action[0]}' requires 2 arguments but was given {len(action)-1} parameter(s)."
+            error_type = "missing argument"
+            return is_error, error_message, error_type
         ingre_index = int(action[1][10])
         pot_index = int(action[2][3])
 

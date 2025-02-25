@@ -2,6 +2,7 @@ import csv
 import numpy as np
 import datetime
 import pandas as pd
+import argparse
 
 # Generate random blockworld scenarios
 def generate_random_blockworld(num_blocks):
@@ -80,15 +81,23 @@ def transform_goal_state(goal_state):
 
 
 if __name__=="__main__":
+    parser = argparse.ArgumentParser(description="LLM-Task-Planner")
+    parser.add_argument('--domain', type=str, choices=DOMAINS, default="blocksworld")
+    parser.add_argument('--method', type=str, choices=METHODS, default="LLM_trans_exact_feedback")
+    parser.add_argument('--num_blocks', type=int, choices=[3,4,5,6], default=3)
+    parser.add_argument('--num_cases', type=int, default=200)
+    parser.add_argument('--max_gen_cases', type=int, default=10000)
+   
 
+    args = parser.parse_args()
     # Generate cases
-    num_blocks = 3
-    maximal_generation_attempts = 10000
-    desired_num_cases = 200
+    num_blocks = args.num_blocks
+    maximal_generation_attempts = args.max_gen_cases    
+    desired_num_cases = args.num_cases
 
     test_case_count = 0
 
-    # initial state that is included in the prompt examples
+    # initial state and goal states that are included in the prompt examples
     if num_blocks == 3:
         initial_state_list = np.array([[0, 0, 1],[0, 3, 0]])
         goal_state_list = np.array([[1, 2, 3], [2, 1, 3]])
@@ -98,6 +107,17 @@ if __name__=="__main__":
         initial_state_list = np.array([[0, 4, 1, 0],[0, 4, 0, 0]])
         goal_state_list = np.array([[3, 2, 1, 4], [3, 4, 2, 1]])
         scenario_list = np.hstack((initial_state_list, goal_state_list))
+    
+    elif num_blocks == 5:
+        initial_state_list = np.array([[0, 0, 0, 0, 1],[0, 0, 0, 0, 0]])
+        goal_state_list = np.array([[1, 2, 3, 4, 5], [2, 1, 3, 5, 4]])
+        scenario_list = np.hstack((initial_state_list, goal_state_list))
+    
+    elif num_blocks == 6:
+        initial_state_list = np.array([[0, 0, 0, 0, 0, 1],[0, 0, 0, 0, 0, 0]])
+        goal_state_list = np.array([[1, 2, 3, 4, 5, 6], [2, 1, 3, 5, 4, 6]])
+        scenario_list = np.hstack((initial_state_list, goal_state_list))
+        
 
     for i in range(maximal_generation_attempts):
 

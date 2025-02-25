@@ -118,7 +118,7 @@ class Planner(object):
                 if self.is_log_example == True and is_reinitialize == False:
                     self.write_content(content= answer, is_append=True)
         
-        if "mistral" or "gemma" in self.model:
+        if "mistral" or "gemma" or "codellama" in self.model:
             # for mistral model, only one system call is allowed, those all previous messages must be merged into one
             total_sys_content = self.messages[0]["content"] + '\n'
             for message in self.messages[1:]:
@@ -140,7 +140,8 @@ class Planner(object):
         # add new question to message list
         if debug:
             print("content: ", content)
-        if len(self.messages) == 1 and "gemma"in self.model:
+        # if only one message, then the message is the openning message
+        if len(self.messages) == 1 and ("gemma" in self.model or "codellama" in self.model):
             openning_content = self.messages[0]["content"]
             question_message = {"role": "user", "content": openning_content + "\n" + content}
             self.messages = [question_message]
@@ -157,16 +158,20 @@ class Planner(object):
             else:
                 question = self.messages
                 question.append(question_message)
-    
+        
         self.write_content(content= content, is_append=True)
         pre_tokens =  self.tokenizer.apply_chat_template(question, tokenize=False,add_generation_prompt=True, )
         inputs = self.tokenizer(pre_tokens, return_tensors="pt", padding=False, truncation=True, max_length=self.max_len).to(self.device)
         del pre_tokens
-        
+        if "deepseek" in self.model:
+            self.temperature = max(0.5, self.temperature)
         if self.temperature is not None and self.temperature>0:
             do_sample = True
         else:
             do_sample = False
+        if "gemma" in self.model:
+            self.llm = self.llm.bfloat16()
+            
         outputs = self.llm.generate(
         inputs.input_ids,
         top_k = 128,

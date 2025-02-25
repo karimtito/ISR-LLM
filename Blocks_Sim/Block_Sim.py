@@ -134,11 +134,12 @@ class BlockSim(object):
         print(f"Action plan: {actions}")
         num_actions = len(actions)
         states = [self.block_state.copy()]
-        is_error = None
+        is_error, error_action_idx = None, -1
         is_satisfied = False
         error_action = None
         error_message = ""
         error_type = ""
+        error_action_idx = None
         
 
         for i in range(num_actions):
@@ -176,15 +177,14 @@ class BlockSim(object):
                 is_error, error_message, error_type = self.pickup(current_action)
 
             else:
-
-                print("Action", action_type, "is not defined.")
+                is_error, error_message, error_type = True, "Action "+ action_type + " is not defined.", "undefined action"
                 continue
 
             # if there is error
             if is_error == True:
 
-                error_action = actions[i]
-
+                error_action,error_action_idx = actions[i],i
+                error_action_idx = i
                 print("Error:", error_message)
                 with open(test_log_file_path, "a") as f:
                     f.write("Error: "+ error_message +"\n")
@@ -209,7 +209,7 @@ class BlockSim(object):
                 if i < num_actions - 1:
 
                     is_error = True
-                    error_action = actions[i]
+                    error_action,error_action_idx = actions[i],i
                     error_message = "Goal satisfied at " + error_action + ". "
                     with open(test_log_file_path, "a") as f:
                         f.write("Goal satisfied at " + error_action + ". " +"\n")
@@ -247,14 +247,19 @@ class BlockSim(object):
                     f.write("Error: "+ error_message +"\n")
                 print(error_message)
         
-        return is_satisfied, is_error, error_message, error_action, error_type, states, actions
+        return is_satisfied, is_error, error_message, error_action, error_type, error_action_idx, states, actions
 
     # unstack b1 from b2
     def unstack(self, action):
 
         is_error = False
         error_message = None
-        error_type = "block"
+        error_type = None
+        if len(action)!=3:
+            is_error = True
+            error_message = f"action '{action[0]}' requires 2 arguments but was given {len(action)-1}."
+            error_type = "missing argument"
+            return is_error, error_message, error_type
         obj1 = action[1].strip('()')
         obj2 = action[2].strip('()')
         print(f"action: {action}")
@@ -331,11 +336,16 @@ class BlockSim(object):
     def stack(self, action):
         print(f"action: {action}")
         is_error = False
-        obj1 = action[1].strip('()')
-        obj2 = action[2].strip('()')
         error_message = None
         error_type = None
-
+        #send
+        if len(action)!=3:
+            is_error = True
+            error_message = f"action '{action[0]}' requires 2 arguments but was given {len(action)-1}."
+            error_type = "missing argument"
+            return is_error, error_message, error_type
+        obj1 = action[1].strip('()')
+        obj2 = action[2].strip('()')
          #check if action first object is of the form bX where X is a number
         if obj1[0] != 'b' or not obj1[1:].isdigit():
             is_error = True
@@ -361,13 +371,13 @@ class BlockSim(object):
         if b1_index not in range(1, self.num_blocks+1):
             is_error = True
             error_type = "index"
-            error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
+            error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks}]. Please replace it by a valid index."
             return is_error, error_message, error_type
 
         if b2_index not in range(1, self.num_blocks+1):
             is_error = True
             error_type = "index"
-            error_message = f"Block b{b2_index} is not a valid block as index {b2_index} is not in the range [1,{self.num_blocks+1}]. Please replace it by a valid index."
+            error_message = f"Block b{b2_index} is not a valid block as index {b2_index} is not in the range [1,{self.num_blocks}]. Please replace it by a valid index."
             return is_error, error_message, error_type
     
 
@@ -415,15 +425,32 @@ class BlockSim(object):
         is_error = False
         error_message = None
         error_type = None
+        if len(action)!=2:
+            is_error = True
+            error_message = f"action '{action[0]}' requires 1 argument but was given {len(action)-1}."
+            error_type = "missing argument"
+            return is_error, error_message, error_type
+        #check if action object is an existing block
+        obj = action[1].strip('()')
+        if not re.match(r"b[0-9]+",obj):
+            is_error = True 
+            error_message = f"{obj} is not a valid block object format and thus not valid argument for 'putdown' action."
+            error_type = "invalid_object"
+            return is_error, error_message, error_type
         b1_index = int(action[1][1])
-
+        #check if block actually exists:
+        if b1_index not in range(1, self.num_blocks+1):
+            is_error = True
+            error_type = "index"
+            error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks}]. Please replace it by a valid index."
+            return is_error, error_message, error_type
         # check if pre-conditions are satisfied
         # hand is not empty
         if self.is_hand_empty == True:
 
             is_error = True
             error_message = "Hand is empty when putting down b" + str(b1_index) + ". "
-            error_type = "hand"
+            error_type = "hand_empty"
             return is_error, error_message, error_type
 
         # b1 is in hand
@@ -443,13 +470,29 @@ class BlockSim(object):
 
     # pickup b1 from table
     def pickup(self, action):
-
+        
         is_error = False
         error_message = None
         error_type = None
-
+        if len(action)!=2:
+            is_error = True
+            error_message = f"action '{action[0]}' requires 1 argument but 2 were given."
+            error_type = "extra_argument"
+            return is_error, error_message, error_type
+        obj = action[1].strip('()')
+        #check if object is a valid block
+        if not re.match(r"b[0-9]+",obj):
+            is_error = True 
+            error_message = f"{obj} is not a valid block object format and thus not valid argument for 'putdown' action."
+            error_type = "invalid_object"
+            return is_error, error_message, error_type
         b1_index = int(action[1][1])
-
+        #check if block index is valid
+        if b1_index not in range(1, self.num_blocks+1):
+            is_error = True
+            error_type = "index"
+            error_message = f"Block b{b1_index} is not a valid block as index {b1_index} is not in the range [1,{self.num_blocks}]. Please replace it by a valid index."
+            return is_error, error_message, error_type
         # check if pre-conditions are satisfied
         # hand empty
         if self.is_hand_empty == False:
